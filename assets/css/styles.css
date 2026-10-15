@@ -53,6 +53,7 @@ body {
   -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
 }
 img, svg, video { max-width: 100%; display: block; }
+img, video { height: auto; } /* keep the intrinsic ratio when max-width shrinks an img that has width/height attributes */
 a { color: inherit; text-decoration: none; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
@@ -238,6 +239,7 @@ p { margin: 0 0 1em; }
 .band__track span::after { content: "✦"; opacity: .85; }
 
 /* ---------- About split ---------- */
+.about-logo { width: 100%; max-width: 480px; aspect-ratio: 1; object-fit: contain; margin-inline: auto; }
 .split { display: grid; grid-template-columns: 1.05fr 1fr; gap: clamp(32px, 6vw, 80px); align-items: center; }
 @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
 .check-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
