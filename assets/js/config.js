@@ -13,8 +13,8 @@ window.T9_CONFIG = {
   phoneTel: "+919932627413",
   email: "Trendli9prints@gmail.com",
 
-  // TODO(client): confirm the exact Instagram handle before launch
-  instagram: "trendli9prints",
+  // Instagram handle (no @) — every Instagram link, label and the JSON-LD sameAs read this one line
+  instagram: "trend.li9",
 
   address: {
     line1: "LG Towers, Flat No. 101",

@@ -84,7 +84,7 @@
   function orderMessage(o) {
     const L = [
       `*NEW ORDER — ${o.id}*`, `via trendli9 website`, ``,
-      `*Customer:* ${o.customer.name}`, `*Phone:* ${o.customer.phone}`,
+      `*Customer:* ${o.customer.name}`, o.customer.ctype ? `*Customer type:* ${o.customer.ctype}` : null, `*Phone:* ${o.customer.phone}`,
       o.customer.email ? `*Email:* ${o.customer.email}` : null,
       `*City:* ${o.customer.city}`, `*Delivery:* ${o.customer.delivery}`,
       o.customer.address ? `*Address:* ${o.customer.address}` : null,
@@ -202,6 +202,9 @@
           <h2 id="coTitle" style="font-size:1.5rem">Confirm your details</h2>
           <p class="muted" style="font-size:.95rem">We'll open WhatsApp with your full order pre-filled. Tap <b>Send</b> and our team confirms price, artwork & timeline in the same chat.</p>
           <div class="form-grid">
+            <div class="field full" id="coTypeField"><span class="label">Ordering as <span class="req">*</span></span><div class="opt-group" role="radiogroup" aria-label="Customer type">
+              <label class="opt"><input type="radio" name="ctype" value="Business"><span>${I("building")} Business</span></label>
+              <label class="opt"><input type="radio" name="ctype" value="Individual"><span>${I("users")} Individual</span></label></div><span class="err">Choose Business or Individual</span></div>
             <div class="field"><label for="coName">Full name <span class="req">*</span></label><input class="input" id="coName" name="name" autocomplete="name" required><span class="err">Please enter your name</span></div>
             <div class="field"><label for="coPhone">WhatsApp number <span class="req">*</span></label><input class="input" id="coPhone" name="phone" type="tel" inputmode="tel" autocomplete="tel" required pattern="^[+0-9 ()-]{10,16}$"><span class="err">Enter a valid 10-digit number</span></div>
             <div class="field"><label for="coCity">City <span class="req">*</span></label><input class="input" id="coCity" name="city" autocomplete="address-level2" required><span class="err">Please enter your city</span></div>
@@ -344,6 +347,7 @@
     form.addEventListener("input", e => { const f = e.target.closest(".field.has-error"); if (f) f.classList.remove("has-error"); });
     form.addEventListener("submit", e => {
       e.preventDefault(); if (!validate(form)) return;
+      if (!form.elements.ctype.value) { $("#coTypeField").classList.add("has-error"); form.querySelector("[name=ctype]").focus(); return; }
       const fd = Object.fromEntries(new FormData(form));
       const items = cart.items();
       const o = { id: newOrderId(), date: new Date().toISOString(), customer: fd, items: items.map(({ thumb, ...rest }) => rest), thumbs: items.map(i => i.thumb || null), total: cart.total(), hasQuote: cart.hasQuote() };
@@ -619,6 +623,10 @@
     $$("i[data-icon]", root).forEach(el => { el.outerHTML = I(el.dataset.icon); });
     $$(".ig-handle", root).forEach(el => { el.textContent = C.instagram; });
     $$(".ig-link", root).forEach(el => { el.href = `https://instagram.com/${C.instagram}`; });
+    // structured data points at the same Instagram profile
+    $$('script[type="application/ld+json"]', root).forEach(el => {
+      try { const d = JSON.parse(el.textContent); d.sameAs = [`https://www.instagram.com/${C.instagram}/`]; el.textContent = JSON.stringify(d); } catch { }
+    });
   }
 
   /* ---------- boot ---------- */
