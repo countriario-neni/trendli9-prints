@@ -259,24 +259,27 @@
         <div class="modal__body">
           <div id="fmReady">
             <p class="eyebrow">Order on WhatsApp</p>
-            <h2 id="fmTitle" style="font-size:1.5rem">Your files are ready</h2>
-            <p class="muted" id="fmReadyTxt">Preparing your files…</p>
+            <h2 id="fmTitle" style="font-size:1.5rem">Your order is ready</h2>
+            <p class="muted" id="fmReadyTxt">Preparing your order image…</p>
             <div style="display:grid;gap:8px">
               <button class="btn btn--wa btn--block" type="button" id="fmShare" disabled>${I("whatsapp")} Share to WhatsApp</button>
-              <button class="btn btn--ghost btn--block" type="button" id="fmNoShare">Can't share? Download instead</button>
             </div>
           </div>
           <div id="fmSteps" hidden>
             <p class="eyebrow">Almost done</p>
-            <h2 style="font-size:1.5rem">Attach your files in WhatsApp</h2>
+            <h2 style="font-size:1.5rem">Send your order in WhatsApp</h2>
+            <p class="muted" id="fmLead"></p>
+            <img class="fm-card" id="fmCard" alt="Your order image: design preview and order details">
             <ol class="fm-steps">
-              <li><b>1</b><span>Your files are downloaded.<small id="fmList"></small></span></li>
-              <li><b>2</b><span id="fmStep2">In the WhatsApp chat that just opened, tap 📎 and attach them.<small>Choose “Document” so WhatsApp doesn't compress your print files.</small></span></li>
-              <li><b>3</b><span>Send.</span></li>
+              <li><b>1</b><span id="fmS1"></span></li>
+              <li><b>2</b><span>Open the WhatsApp chat — your order text is already in the message box.</span></li>
+              <li><b>3</b><span id="fmS3"></span></li>
             </ol>
             <div style="display:grid;gap:8px">
+              <button class="btn btn--accent btn--block" type="button" id="fmCopy">${I("copy")} <span>Copy order image</span></button>
               <a class="btn btn--wa btn--block" id="fmWA" href="#" target="_blank" rel="noopener">${I("whatsapp")} Open the WhatsApp chat</a>
-              <button class="btn btn--ghost btn--block" type="button" id="fmAgain">${I("download")} Download the files again</button>
+              <button class="btn btn--ghost btn--block" type="button" id="fmDlCard">${I("download")} Download order image</button>
+              <button class="btn btn--ghost btn--block" type="button" id="fmDlAll">${I("download")} <span>Download print files</span></button>
             </div>
           </div>
         </div>
@@ -353,22 +356,24 @@
     loadCheckoutFiles(items);
   }
   // read the cart's files before Send, so sharing can happen inside that tap
-  let coFiles = [];
+  // each item's first file is its preview picture (sheet layout / mockup) for the order card
+  let coFiles = [], coPictures = [];
   function loadCheckoutFiles(items) {
     const note = $("#coFiles"), send = $("#checkoutForm [type=submit]"), withFiles = items.filter(i => i.files);
-    coFiles = [];
+    coFiles = []; coPictures = [];
     note.hidden = !withFiles.length; send.disabled = false;
     if (!withFiles.length) return;
     note.textContent = "Attaching your files…"; send.disabled = true;
-    Promise.all(withFiles.map(i => fileStore.get(i.key).catch(() => []))).then(lists => {
+    Promise.all(withFiles.map(i => fileStore.get(i.key).catch(() => []))).then(async lists => {
+      coPictures = (await Promise.all(lists.map(l => l[0] && /^image\//.test(l[0].type) ? createImageBitmap(l[0]).catch(() => null) : null))).filter(Boolean);
       const seen = new Set();
-      coFiles = lists.flat().map(f => { // the same name twice (two gang sheets) gets a number
+      coFiles = lists.flatMap(l => l.slice(1)).map(f => { // the same name twice (two gang sheets) gets a number
         let name = f.name, k = 1;
         while (seen.has(name)) name = f.name.replace(/(\.[^.]+)?$/, `-${++k}$1`);
         seen.add(name);
         return name === f.name ? f : new File([f], name, { type: f.type });
       });
-      note.textContent = coFiles.length ? `${coFiles.length} file${coFiles.length > 1 ? "s" : ""} will be sent with your order (print files, mockups and artwork).` : "Your files couldn't be loaded - attach them in WhatsApp after sending.";
+      note.textContent = coPictures.length || coFiles.length ? "Your designs go with the order as one order image (preview + details), plus your files where WhatsApp allows." : "Your files couldn't be loaded - attach them in WhatsApp after sending.";
       send.disabled = false;
     });
   }
@@ -404,11 +409,13 @@
       store.set("t9_customer", { name: fd.name, phone: fd.phone, city: fd.city });
       const msg = orderMessage(o);
       o.message = msg; const saved = orders.add(o);
-      const files = coFiles; coFiles = [];
+      // one order card (design previews + this order text) leads the files, built inside this tap
+      const files = coPictures.length || coFiles.length ? [orderCard(msg.split("\n"), coPictures, `trendli9-order-${o.id}.png`), ...coFiles] : [];
+      coFiles = [];
       form.reset(); $("#coAddrWrap").hidden = true; $("#coAddr").required = false;
-      if (files.length) { // images go with the order: share sheet, or download + steps dialog
+      if (files.length) { // the order card + files go with the order: share sheet, or copy/paste steps
         orderWithFiles({ text: msg, files }).then(res => {
-          if (res !== "shared") { toast(`Order ${o.id} created - attach your files and tap Send in WhatsApp`); return; }
+          if (res !== "shared") { toast(`Order ${o.id} created - send the order image in WhatsApp`); return; }
           closeLayers(); toast(`Order ${o.id} shared - tap Send in WhatsApp`);
           if (saved) setTimeout(() => { location.href = "orders.html?new=" + encodeURIComponent(o.id); }, 1200);
         });
@@ -425,10 +432,12 @@
   }
 
   /* ---------- WhatsApp orders with images ----------
-     wa.me links carry text only. Where the browser can share files (mostly
-     phones) the Web Share API sends the images and the order text together;
-     otherwise the files are downloaded, WhatsApp opens with the text, and a
-     short steps dialog explains how to attach them. */
+     wa.me / api.whatsapp.com links carry text only, so every order with files
+     gets an "order card": ONE image holding the design preview and the full
+     order details. Where the browser can share files (phones, Chrome/Edge on
+     Windows, Safari) the card and the text go to WhatsApp together. Elsewhere
+     the card is copied to the clipboard and pasted into the chat, where the
+     order text is already filled in. Nothing downloads unless asked. */
   function saveFile(file) {
     const url = URL.createObjectURL(file), a = document.createElement("a");
     a.href = url; a.download = file.name;
@@ -438,46 +447,221 @@
   async function downloadAll(files) {
     for (const f of files) { saveFile(f); await new Promise(r => setTimeout(r, 400)); } // one after another
   }
+  function dataURLFile(url, name) {
+    const i = url.indexOf(","), bin = atob(url.slice(i + 1)), u = new Uint8Array(bin.length);
+    for (let k = 0; k < bin.length; k++) u[k] = bin.charCodeAt(k);
+    return new File([u], name, { type: url.slice(5, url.indexOf(";")) });
+  }
+  /* The order card. Synchronous on purpose (toDataURL): it is built inside the
+     Send tap, and sharing must still happen within that tap. Landscape and at
+     most ~1600 px tall so WhatsApp's photo compression keeps the text readable.
+     lines: the WhatsApp order text, line by line · pictures: canvases / images */
+  function orderCard(lines, pictures, name = "trendli9-order.png") {
+    const W = 1600, P = 56, GAP = 48, TW = 720, PW = W - 2 * P - GAP - TW, HEAD = 112, LH = 38, FOOT = 64;
+    const c = document.createElement("canvas"), x = c.getContext("2d");
+    const font = (w, s) => `${w} ${s}px Inter, "Segoe UI", system-ui, sans-serif`;
+    // wrap the order text (WhatsApp *bold* markers become bold lines)
+    const rows = [];
+    lines.forEach(raw => {
+      const bold = /^\s*\*/.test(raw), t = raw.replace(/\*/g, "");
+      if (!t.trim()) { rows.push({ t: "", bold }); return; }
+      x.font = font(bold ? 700 : 500, 27);
+      const indent = (t.match(/^\s*/) || [""])[0].length ? 28 : 0;
+      let line = "";
+      t.trim().split(/\s+/).forEach(word => {
+        const next = line ? line + " " + word : word;
+        if (x.measureText(next).width > TW - indent && line) { rows.push({ t: line, bold, indent }); line = word; }
+        else line = next;
+      });
+      rows.push({ t: line, bold, indent });
+    });
+    const textH = rows.length * LH;
+    // pictures stacked in the right column, scaled to fit
+    const pics = pictures.filter(p => p && p.width && p.height);
+    let picH = pics.reduce((s, p) => s + PW * p.height / p.width, 0) + 20 * Math.max(0, pics.length - 1);
+    const maxPicH = Math.max(textH, 1100), k = picH > maxPicH ? maxPicH / picH : 1;
+    picH *= k;
+    c.width = W; c.height = Math.round(HEAD + P + Math.max(textH, picH) + P + FOOT);
+    x.fillStyle = "#FFFFFF"; x.fillRect(0, 0, c.width, c.height);
+    // header band
+    x.fillStyle = "#0A0A0A"; x.fillRect(0, 0, W, HEAD);
+    ["#00A8F0", "#E5007E", "#FFC400", "#FFFFFF"].forEach((col, i) => { x.fillStyle = col; x.beginPath(); x.arc(P + 9 + i * 26, HEAD / 2, 8, 0, Math.PI * 2); x.fill(); });
+    x.fillStyle = "#FFFFFF"; x.textBaseline = "middle"; x.font = font(800, 38); x.fillText(C.brand.toUpperCase(), P + 120, HEAD / 2);
+    x.textAlign = "right"; x.font = font(600, 22); x.fillStyle = "#A6AAB8"; x.fillText("ORDER SUMMARY", W - P, HEAD / 2); x.textAlign = "left";
+    // text column
+    x.textBaseline = "top";
+    rows.forEach((r, i) => { x.font = font(r.bold ? 700 : 500, 27); x.fillStyle = r.bold ? "#0A0A0A" : "#262626"; x.fillText(r.t, P + (r.indent || 0), HEAD + P + i * LH); });
+    // picture column
+    let y = HEAD + P;
+    const px = P + TW + GAP;
+    pics.forEach(p => {
+      const w = PW * k, h = w * p.height / p.width, ox = px + (PW - w) / 2;
+      x.drawImage(p, ox, y, w, h);
+      x.strokeStyle = "#E2E4EA"; x.lineWidth = 2; x.strokeRect(ox, y, w, h);
+      y += h + 20 * k;
+    });
+    // footer
+    x.fillStyle = "#F3F4F6"; x.fillRect(0, c.height - FOOT, W, FOOT);
+    x.fillStyle = "#5A5F6E"; x.font = font(500, 22); x.textBaseline = "middle";
+    x.fillText(`${C.brand} · WhatsApp ${C.phoneDisplay} · ${C.address.city}`, P, c.height - FOOT / 2);
+    return dataURLFile(c.toDataURL("image/png"), name);
+  }
+
+  // what the share sheet gets: the card first, then other files while they fit WhatsApp / browser limits
+  const SHARE_MAX_FILES = 10, SHARE_MAX_BYTES = 20 * 1024 * 1024, SHARE_MAX_EACH = 15 * 1024 * 1024;
+  function shareSet(files) {
+    const out = [files[0]];
+    let total = files[0].size;
+    for (const f of files.slice(1)) {
+      if (out.length >= SHARE_MAX_FILES || f.size > SHARE_MAX_EACH || total + f.size > SHARE_MAX_BYTES) continue;
+      out.push(f); total += f.size;
+    }
+    return out;
+  }
   const canShareFiles = files => { try { return !!(navigator.canShare && navigator.canShare({ files })); } catch { return false; } };
-  function showSteps(text, files, waOpened) {
+  // copy/paste is the desktop route; on phones attaching from the gallery is more reliable
+  const canCopyImage = () => !!(navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== "undefined") && matchMedia("(pointer: fine)").matches;
+  function copyImage(file) {
+    try { return navigator.clipboard.write([new ClipboardItem({ [file.type]: file })]).then(() => true, () => false); }
+    catch { return Promise.resolve(false); }
+  }
+
+  let cardURL = null;
+  function showSteps(text, files, { copied = false, cancelled = false } = {}) {
+    const card = files[0], extras = files.slice(1), canCopy = canCopyImage();
     $("#fmReady").hidden = true; $("#fmSteps").hidden = false;
-    $("#fmList").textContent = files.map(f => f.name).join(" · ");
-    $("#fmStep2").firstChild.textContent = waOpened ? "In the WhatsApp chat that just opened, tap 📎 and attach them." : "Open the WhatsApp chat below, tap 📎 and attach them.";
+    if (cardURL) URL.revokeObjectURL(cardURL);
+    $("#fmCard").src = cardURL = URL.createObjectURL(card);
+    $("#fmLead").textContent = cancelled ? "Didn't see WhatsApp in the share list? Send it this way — one image holds your design and all the order details."
+      : "One image holds your design and all the order details, so the studio sees everything together.";
+    const s1 = $("#fmS1"), copyBtn = $("#fmCopy");
+    const setCopied = ok => {
+      s1.textContent = ok ? "Order image copied ✓" : canCopy ? "Tap Copy order image." : "Tap Download order image (below).";
+      copyBtn.querySelector("span").textContent = ok ? "Copy order image again" : "Copy order image";
+    };
+    setCopied(copied);
+    $("#fmS3").textContent = canCopy ? "In the chat, paste the image (Ctrl+V, or right-click → Paste) and tap Send." : "In the chat, tap 📎, attach the order image and tap Send.";
+    copyBtn.hidden = !canCopy;
+    copyBtn.onclick = () => copyImage(card).then(ok => { setCopied(ok); toast(ok ? "Order image copied — paste it into the WhatsApp chat" : "Couldn't copy — download the order image instead"); });
     $("#fmWA").href = waLink(text);
-    $("#fmAgain").onclick = () => downloadAll(files);
+    $("#fmDlCard").onclick = () => saveFile(card);
+    const dlAll = $("#fmDlAll");
+    dlAll.hidden = !extras.length;
+    dlAll.querySelector("span").textContent = `Download print files (${extras.length})`;
+    dlAll.onclick = () => downloadAll(extras);
     closeLayers(); openLayer($("#filesModal"));
   }
-  // files are downloaded and wa.me opens; call inside a click so the new tab isn't blocked
-  function fallbackOrder(text, files) {
-    openWA(text);
-    downloadAll(files);
-    showSteps(text, files, true);
-    return "fallback";
+  /* ---------- order link (site/worker) ----------
+     For browsers that can't share files: the order image and files are uploaded
+     and WhatsApp opens with the order text plus a link to them. WhatsApp shows
+     the link's preview (the order image) inside the same message. */
+  const UPLOAD_MAX_FILES = 29, UPLOAD_MAX_BYTES = 90 * 1024 * 1024;
+  async function previewJPEG(card) { // small image for link previews
+    const bm = await createImageBitmap(card), w = Math.min(1200, bm.width), h = Math.round(bm.height * w / bm.width);
+    const c = document.createElement("canvas"); c.width = w; c.height = h;
+    const x = c.getContext("2d"); x.fillStyle = "#FFFFFF"; x.fillRect(0, 0, w, h); x.drawImage(bm, 0, 0, w, h);
+    const b = await new Promise(r => c.toBlob(r, "image/jpeg", 0.82));
+    return new File([b], "preview.jpg", { type: "image/jpeg" });
   }
-  function shareNow(text, files) {
-    return navigator.share({ files, text }).then(() => "shared", err => {
-      if (err && err.name === "AbortError") return "cancelled";
-      downloadAll(files); showSteps(text, files, false); // e.g. too large to share
-      return "fallback";
+  async function uploadOrder(text, files, onProgress) {
+    const fd = new FormData();
+    fd.append("text", text);
+    fd.append("card", files[0], files[0].name);
+    try { const p = await previewJPEG(files[0]); fd.append("preview", p, p.name); } catch { }
+    let total = files[0].size, n = 0;
+    for (const f of files.slice(1)) {
+      if (n >= UPLOAD_MAX_FILES || total + f.size > UPLOAD_MAX_BYTES) continue;
+      fd.append("files", f, f.name); total += f.size; n++;
+    }
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", C.orderApi.replace(/\/+$/, "") + "/orders");
+      xhr.upload.onprogress = e => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
+      xhr.onload = () => {
+        let r = {}; try { r = JSON.parse(xhr.responseText); } catch { }
+        xhr.status === 201 && r.url ? resolve(r) : reject(new Error(r.error || "upload failed (" + xhr.status + ")"));
+      };
+      xhr.onerror = () => reject(new Error("network"));
+      xhr.send(fd);
     });
   }
-  /* Send an order with its images. `files` (File[]) must be ready when this runs
-     in a click; or pass `getFiles` (async) and phones get one extra "Share" tap
-     once the files are prepared, because sharing needs a fresh tap. */
+  const withLink = (text, url) => `${text}\n\n📎 Order image & files: ${url}`;
+  /* Opens the WhatsApp tab inside this click (so it isn't blocked), uploads, then
+     points the tab at the chat. `files` may be a promise (files still preparing). */
+  function sendViaLink(text, files) {
+    let tab = null;
+    try { tab = window.open("", "_blank"); } catch { tab = null; }
+    if (tab) { try { tab.opener = null; tab.document.title = "Opening WhatsApp…"; tab.document.body.innerHTML = '<p style="font:16px system-ui;padding:24px">Attaching your order image… WhatsApp opens in a moment.</p>'; } catch { } }
+    $("#fmReady").hidden = false; $("#fmSteps").hidden = true;
+    const btn = $("#fmShare"), txt = $("#fmReadyTxt");
+    $("#fmTitle").textContent = "Sending your order…";
+    btn.hidden = true; txt.textContent = "Attaching your order image…";
+    closeLayers(); openLayer($("#filesModal"));
+    return Promise.resolve(files).then(f => uploadOrder(text, f, p => { txt.textContent = `Attaching your order image and files… ${Math.round(p * 100)}%`; })
+      .then(({ url }) => {
+        const wa = waLink(withLink(text, url));
+        if (tab && !tab.closed) { tab.location.replace(wa); closeLayers(); toast("WhatsApp is open with your order and its image — tap Send"); return "shared"; }
+        // the browser blocked the tab: one tap opens it
+        $("#fmTitle").textContent = "Your order is ready";
+        txt.textContent = "Tap the button to open WhatsApp — your order text and its image link are filled in. Then tap Send.";
+        btn.hidden = false; btn.disabled = false; btn.focus();
+        return new Promise(resolve => { btn.onclick = () => { openWA(withLink(text, url)); closeLayers(); resolve("shared"); }; });
+      }, err => {
+        console.warn("order upload failed", err);
+        if (tab && !tab.closed) tab.close();
+        showSteps(text, f, {}); // couldn't upload: fall back to sending the image by hand
+        return "fallback";
+      }))
+      .catch(() => { // the files themselves couldn't be prepared: send the text at least
+        if (tab && !tab.closed) tab.location.replace(waLink(text)); else openWA(text);
+        closeLayers(); return "fallback";
+      });
+  }
+  // after a share sheet was closed or failed there is no tap left to open a tab: ask for one
+  function offerLink(text, files, cancelled) {
+    if (!C.orderApi) { showSteps(text, files, { cancelled }); return Promise.resolve("fallback"); }
+    $("#fmReady").hidden = false; $("#fmSteps").hidden = true;
+    const btn = $("#fmShare"), txt = $("#fmReadyTxt");
+    $("#fmTitle").textContent = cancelled ? "WhatsApp not in the list?" : "Send it another way";
+    txt.textContent = "Send the order with a link instead — WhatsApp shows your order image right under the order text.";
+    btn.hidden = false; btn.disabled = false;
+    closeLayers(); openLayer($("#filesModal"));
+    return new Promise(resolve => { btn.onclick = () => sendViaLink(text, files).then(resolve); });
+  }
+
+  // files[0] is the order card; must run inside the click that sends the order
+  function sendNow(text, files) {
+    const set = shareSet(files);
+    if (canShareFiles(set)) {
+      return navigator.share({ files: set, text }).then(() => {
+        if (set.length < files.length) toast("Large print files stayed on this device — the studio can ask for them");
+        return "shared";
+      }, err => offerLink(text, files, !!err && err.name === "AbortError"));
+    }
+    if (C.orderApi) return sendViaLink(text, files);
+    const copying = canCopyImage() ? copyImage(files[0]) : Promise.resolve(false); // still inside the tap
+    return copying.then(copied => { showSteps(text, files, { copied }); return "fallback"; });
+  }
+  /* Send an order with its images. Pass `files` (File[], card first) when they
+     are ready in the click; or `getFiles` (async) and the customer gets one
+     more tap once they're prepared, because sharing needs a fresh tap. */
   async function orderWithFiles({ text, files, getFiles }) {
-    const probe = files && files.length ? files : [new File([new Uint8Array(8)], "probe.png", { type: "image/png" })];
-    if (files) return canShareFiles(files) ? shareNow(text, files) : fallbackOrder(text, files);
-    if (!canShareFiles(probe)) { openWA(text); const f = await getFiles(); downloadAll(f); showSteps(text, f, true); return "fallback"; }
+    if (files) return sendNow(text, files);
+    const probe = [new File([new Uint8Array(8)], "probe.png", { type: "image/png" })];
+    if (!canShareFiles(probe)) {
+      if (C.orderApi) return sendViaLink(text, getFiles()); // tab opens in this click, upload follows
+      const f = await getFiles(); showSteps(text, f, {}); return "fallback";
+    }
     $("#fmReady").hidden = false; $("#fmSteps").hidden = true;
     const share = $("#fmShare"), txt = $("#fmReadyTxt");
-    share.disabled = true; txt.textContent = "Preparing your files…";
+    $("#fmTitle").textContent = "Your order is ready";
+    share.hidden = false; share.disabled = true; txt.textContent = "Preparing your order image…";
     openLayer($("#filesModal"));
     const f = await getFiles();
-    txt.textContent = `${f.length === 1 ? "1 file" : f.length + " files"} ready. Tap Share, pick WhatsApp and choose the ${C.brand} chat (${C.phoneDisplay}) — your images and order details go together.`;
+    txt.textContent = `Tap Share, pick WhatsApp and choose the ${C.brand} chat (${C.phoneDisplay}). Your order image (design + details) and the order text go together.`;
     share.disabled = false; share.focus();
     return new Promise(resolve => {
-      share.onclick = () => { if (!canShareFiles(f)) { resolve(fallbackOrder(text, f)); return; } closeLayers(); shareNow(text, f).then(resolve); };
-      $("#fmNoShare").onclick = () => resolve(fallbackOrder(text, f));
+      share.onclick = () => { closeLayers(); sendNow(text, f).then(resolve); };
     });
   }
 
@@ -695,5 +879,5 @@
   bindGlobal(); bindCheckout(); initLightbox(); updateCartCount(); renderCart();
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initMotion); else initMotion();
 
-  window.T9 = { safeThumb, safeHex, hydrate, $, $$, esc, money, waLink, openWA, orderWithFiles, cart, orders, priceLine, tierFor, toast, store, orderMessage, openLayer, closeLayers, validate, reduceMotion };
+  window.T9 = { safeThumb, safeHex, hydrate, $, $$, esc, money, waLink, openWA, orderWithFiles, orderCard, cart, orders, priceLine, tierFor, toast, store, orderMessage, openLayer, closeLayers, validate, reduceMotion };
 })();

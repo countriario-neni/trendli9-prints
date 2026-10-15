@@ -282,7 +282,13 @@
     const i = buildItem(); S.dirty = false;
     const text = [`Hi Trendli9! I designed this in your Design Studio:`, ``, `*${i.name}* — ${i.color}`, `Sizes: ${Object.entries(i.sizes).map(([s, q]) => `${s}×${q}`).join(", ")} (${i.qty} pcs)`,
       `Print: ${i.areas.join(", ")}`, `Design: ${i.design}`, i.notes ? `Notes: ${i.notes}` : null, `Est.: ${money(i.total)}`, ``, `My mockup and artwork files are attached.`].filter(x => x !== null).join("\n");
-    window.T9.orderWithFiles({ text, getFiles: orderFiles }).catch(() => openWA(text));
+    // one order card (mockups + this text) leads the files, so the studio sees design and details together
+    const getFiles = async () => {
+      const files = await orderFiles();
+      const pics = await Promise.all(files.filter(f => /-mockup\.png$/.test(f.name)).map(f => createImageBitmap(f).catch(() => null)));
+      return [window.T9.orderCard(text.split("\n"), pics.filter(Boolean), `trendli9-${S.product.id}-order.png`), ...files];
+    };
+    window.T9.orderWithFiles({ text, getFiles }).catch(() => openWA(text));
   });
   addEventListener("beforeunload", e => { if (S.dirty && (S.layers.front.length || S.layers.back.length)) { e.preventDefault(); e.returnValue = ""; } });
 

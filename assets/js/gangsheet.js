@@ -962,18 +962,50 @@
     }
     return out;
   }
+  // The layout picture for the order card: every sheet side by side, then each design with size, copies and DPI
+  function orderPicture(L) {
+    const n = L.sheets.length, cols = Math.min(n, 3), SW = 300, G = 24, LAB = 34;
+    const sheets = L.sheets.map(sh => { const cv = document.createElement("canvas"); drawSheet(cv, L, sh, SW, 1); return cv; });
+    const sh = sheets[0].height, W = Math.max(cols * SW + (cols - 1) * G, 640), rows = Math.ceil(n / cols);
+    const ds = Array.from(perDesign(L)), PER = W >= 900 ? 2 : 1, CW = (W - G * (PER - 1)) / PER, CH = 132, top = rows * (sh + LAB) + (rows - 1) * G + 28;
+    const c = document.createElement("canvas"); c.width = W; c.height = Math.round(top + Math.ceil(ds.length / PER) * (CH + 12));
+    const x = c.getContext("2d"), font = (w, s) => `${w} ${s}px Inter, "Segoe UI", system-ui, sans-serif`;
+    x.fillStyle = "#FFFFFF"; x.fillRect(0, 0, c.width, c.height);
+    x.textBaseline = "top";
+    sheets.forEach((cv, i) => {
+      const ox = (W - (cols * SW + (cols - 1) * G)) / 2 + (i % cols) * (SW + G), oy = Math.floor(i / cols) * (sh + LAB + G);
+      x.drawImage(cv, ox, oy);
+      x.fillStyle = "#0A0A0A"; x.font = font(700, 18); x.fillText(`Sheet ${i + 1} · ${SHEET_W} × ${SHEET_H} in`, ox + 26, oy + sh + 8);
+    });
+    ds.forEach(([d, cnt], i) => {
+      const ox = (i % PER) * (CW + G), oy = top + Math.floor(i / PER) * (CH + 12), T = CH - 20;
+      x.fillStyle = "#F3F4F6"; x.fillRect(ox, oy, CW, CH);
+      const r = d.hIn / d.wIn, tw = r > 1 ? T / r : T, th = r > 1 ? T : T * r;
+      drawArt(x, d, ox + 10 + (T - tw) / 2, oy + 10 + (T - th) / 2, tw, th, false);
+      const tx = ox + T + 24, maxW = CW - T - 32;
+      const fit = (t, y) => { // shorten with an ellipsis rather than spill out of the cell
+        let s = t; while (x.measureText(s).width > maxW && s.length > 4) s = s.slice(0, -2);
+        x.fillText(s === t ? s : s + "…", tx, y);
+      };
+      x.fillStyle = "#0A0A0A"; x.font = font(700, 18); fit(d.name, oy + 16);
+      x.fillStyle = "#262626"; x.font = font(500, 17);
+      fit(`${f2(d.wIn)} × ${f2(d.hIn)} in · ${plural(cnt, "copy", "copies")}`, oy + 48);
+      fit(dpiNote(d), oy + 76);
+    });
+    return c;
+  }
   function prepareFiles(L) {
     if (prep && prep.L === L) return prep.files;
-    const status = $("#gsOrdFiles"), n = L.sheets.length;
+    const status = $("#gsOrdFiles"), n = L.sheets.length, picture = orderPicture(L);
     const files = (async () => {
-      const out = [];
+      const out = [new File([await new Promise(r => picture.toBlob(r, "image/png"))], "trendli9-gang-sheet-layout.png", { type: "image/png" })];
       for (let i = 0; i < n; i++) {
         const blob = await sheetPNG(L, L.sheets[i], p => { if (prep && prep.L === L) status.textContent = `Preparing print files… sheet ${i + 1} of ${n} (${Math.round(p * 100)}%)`; });
         out.push(new File([blob], sheetName(i, n), { type: "image/png" }));
       }
       return out.concat(originals(L));
     })();
-    prep = { L, files };
+    prep = { L, files, picture };
     return files;
   }
   function readyOrder() {
@@ -984,7 +1016,7 @@
       // the layout changed meanwhile (e.g. a size field committed on blur): prepare the current one
       if (state.layout !== L) { if (ordModal.classList.contains("is-open")) readyOrder(); return; }
       if (prep && prep.L === L) prep.ready = files;
-      $("#gsOrdFiles").textContent = `Ready: ${plural(L.sheets.length, "print sheet")} + ${plural(files.length - L.sheets.length, "original design")}.`;
+      $("#gsOrdFiles").textContent = `Ready: ${plural(L.sheets.length, "print sheet")} + ${plural(files.length - L.sheets.length - 1, "original design")}. They go with one order image showing your layout and details.`;
       ordSend.disabled = false;
     }, () => { $("#gsOrdFiles").textContent = "Couldn't render the print files on this device — your order text will still be sent."; prep = null; ordSend.disabled = false; });
   }
@@ -1001,9 +1033,10 @@
     const fd = new FormData(ordForm), ctype = fd.get("ctype");
     if (!ctype) { $("#gsOrdTypeField").classList.add("has-error"); ordForm.querySelector("[name=ctype]").focus(); return; }
     const text = orderText(L, ctype, (fd.get("notes") || "").trim());
-    const files = prep && prep.L === L && prep.ready || []; // read synchronously: sharing needs this tap
-    if (!files.length) { T9.openWA(text); T9.closeLayers(); return; } // no files on this device: text only
-    const res = await T9.orderWithFiles({ text, files });
+    // built synchronously: sharing has to happen inside this tap
+    const ready = prep && prep.L === L && prep.ready || [], picture = prep && prep.L === L ? prep.picture : orderPicture(L);
+    const card = T9.orderCard(text.split("\n"), [picture], "trendli9-gang-sheet-order.png");
+    const res = await T9.orderWithFiles({ text, files: [card, ...ready.slice(1)] }); // the card replaces the plain layout picture
     if (res === "shared") { T9.closeLayers(); toast("Order shared — tap Send in WhatsApp"); }
   });
 

@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Stores gang sheet / design orders (order image + files) and serves an order page,
+  // so the WhatsApp message can carry the order text plus a link that previews the image.
+  "name": "trendli9-orders",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-01",
+  "r2_buckets": [
+    { "binding": "ORDERS", "bucket_name": "trendli9-orders" }
+  ],
+  // max 10 uploads per minute from one IP address
+  "ratelimits": [
+    { "name": "UPLOAD_LIMIT", "namespace_id": "4019", "simple": { "limit": 10, "period": 60 } }
+  ],
+  "vars": {
+    // only the website may upload; comma-separated origins
+    "ALLOWED_ORIGINS": "https://portfolio.hirerockysolutions.com,http://127.0.0.1:8765,http://localhost:8765",
+    "BRAND": "Trendli9 Prints",
+    "WHATSAPP": "919932627413"
+  },
+  "observability": { "enabled": true }
+}
