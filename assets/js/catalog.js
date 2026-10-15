@@ -80,15 +80,15 @@
       desc: "6-panel cotton twill cap with adjustable strap. Front DTF logo print.",
       colors: BASIC_COLORS, sizes: ["Free size"], areas: [PRINT_AREAS[0]], custom: true, minQty: 1 },
     { id: "tote", photo: "p-tote", cat: "accessories", name: "Canvas Tote Bag", mockup: "tote", price: 249, unit: "piece",
-      desc: "12 oz natural canvas, 38×42 cm with long handles. Perfect for events, boutiques and merch.",
-      colors: NATURAL, sizes: ["38 × 42 cm"], areas: PRINT_AREAS.slice(0, 2), custom: true, badge: "Eco", minQty: 1 },
+      desc: "12 oz natural canvas, 15 × 16.5 in with long handles. Perfect for events, boutiques and merch.",
+      colors: NATURAL, sizes: ["15 × 16.5 in"], areas: PRINT_AREAS.slice(0, 2), custom: true, badge: "Eco", minQty: 1 },
 
     // ---------- Home Décor ----------
     { id: "cushion", photo: "p-cushion", cat: "home", name: "Printed Cushion Cover", mockup: "cushion", price: 299, unit: "piece",
       desc: "16×16 in poly-canvas cover with concealed zip. Photos, patterns, names — edge to edge.",
       colors: [{ name: "White", hex: "#F7F7F5" }, { name: "Natural", hex: "#EFE6D2" }, { name: "Grey Melange", hex: "#A9ABAE" }],
       sizes: ["16 × 16 in", "18 × 18 in"], areas: [PRINT_AREAS[0]], custom: true, minQty: 1 },
-    { id: "decor-fabric", cat: "home", name: "Home Décor Fabric Printing", img: "svc-decor", price: null, unit: "metre",
+    { id: "decor-fabric", cat: "home", name: "Home Décor Fabric Printing", img: "svc-decor", price: null, unit: "piece",
       desc: "Table runners, curtains, wall tapestries and upholstery panels printed to your theme.",
       custom: false, quote: true, minQty: 1 },
 
@@ -104,12 +104,12 @@
       custom: false, quote: true, minQty: 10 },
 
     // ---------- DTF Transfers ----------
-    { id: "dtf-meter", cat: "dtf", name: "DTF Gang Sheet — Per Metre", img: "svc-dtf", price: 250, unit: "metre",
-      desc: "Send your gang sheet (58 cm wide). Printed, powdered and cured — ready to press on any fabric.",
-      sizes: ["58 cm × 1 m"], custom: false, badge: "₹250 / m", minQty: 1, meter: true },
+    { id: "dtf-gang-sheet", cat: "dtf", name: "DTF Gang Sheet — 22 × 39 in", img: "svc-dtf", price: 250, unit: "sheet",
+      desc: "Send your gang sheet (22 × 39 in, portrait), billed as one metre at ₹250 per metre. Printed, powdered and cured — ready to press on any fabric.",
+      sizes: ["22 × 39 in sheet"], custom: false, badge: "₹250 / m", minQty: 1, meter: true },
     { id: "dtf-ready", cat: "dtf", name: "Ready-to-Press DTF Transfers", img: "process-heatpress", price: 45, unit: "transfer",
       desc: "Single designs cut to size. Press at 160 °C for 12–15 s, peel hot or cold.",
-      sizes: ["Logo (10×10 cm)", "A5", "A4", "A3"], sizePrice: { "Logo (10×10 cm)": 15, "A5": 30, "A4": 45, "A3": 80 },
+      sizes: ["Logo (4×4 in)", "A5", "A4", "A3"], sizePrice: { "Logo (4×4 in)": 15, "A5": 30, "A4": 45, "A3": 80 },
       custom: false, minQty: 10 },
 
     // ---------- Spares & Consumables ----------
@@ -117,8 +117,8 @@
       desc: "Vivid, wash-fast textile pigment inks. White ink with anti-settle formula.",
       sizes: ["Cyan", "Magenta", "Yellow", "Black", "White"], custom: false, quote: true, minQty: 1 },
     { id: "dtf-film", icon: "layers", tile: "var(--cyan)", cat: "consumables", name: "DTF PET Film Roll", img: "svc-consumables", price: null, unit: "roll",
-      desc: "Hot & cold peel double-side matte film. A3 sheets, 30 cm and 60 cm × 100 m rolls.",
-      sizes: ["A3 sheets (100)", "30 cm × 100 m", "60 cm × 100 m"], custom: false, quote: true, minQty: 1 },
+      desc: "Hot & cold peel double-side matte film. A3 sheets, 12 in and 24 in × 328 ft rolls.",
+      sizes: ["A3 sheets (100)", "12 in × 328 ft", "24 in × 328 ft"], custom: false, quote: true, minQty: 1 },
     { id: "dtf-powder", icon: "sparkle", tile: "var(--violet)", cat: "consumables", name: "Hot-Melt Adhesive Powder", img: "svc-consumables", price: null, unit: "kg",
       desc: "Fine / medium TPU powder for soft hand-feel and strong wash durability.",
       sizes: ["Fine 1 kg", "Medium 1 kg", "Black 1 kg"], custom: false, quote: true, minQty: 1 },

@@ -3,7 +3,7 @@
    Built per the "Build 3D websites that run live" guide:
    01 one object + one verb (DTF heat press · HOLD TO PRESS)
    02 one fixed canvas behind the story
-   03 every part built from code (extruded shapes, real mm, bevels)
+   03 every part built from code (extruded shapes, real-world scale, bevels)
    04 MeshPhysicalMaterial — satin faces, polished edges, brushed anisotropy
    05 PMREM studio lighting rotated by the cursor
    06 scroll cue list directs the camera (frame by size)
@@ -188,7 +188,7 @@ async function boot() {
   const pedestal = mesh(new THREE.CylinderGeometry(42, 52, 70, 40), [satinAlu, polished, polished], [0, 52 + 35, 0]);
   press.add(reg(pedestal, { lift: [0, -20, 0], order: .2 }));
   const lower = mesh(slab(380, 380, 24, 10, 1.6), [satinAlu, polished], [0, 122, 0]);
-  press.add(reg(lower, { lift: [0, 40, 0], order: .35, label: "Lower platen", sub: "380 × 380 mm, threadable", anchor: [190, 12, 120] }));
+  press.add(reg(lower, { lift: [0, 40, 0], order: .35, label: "Lower platen", sub: "15 × 15 in, threadable", anchor: [190, 12, 120] }));
   const pad = mesh(slab(380, 380, 8, 10, 1), silicone, [0, 146, 0]);
   press.add(reg(pad, { lift: [0, 85, 0], order: .45, label: "Silicone pad", sub: "Even pressure, edge to edge", anchor: [-190, 4, -60] }));
 
