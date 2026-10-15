@@ -93,9 +93,10 @@
       custom: false, quote: true, minQty: 1 },
 
     // ---------- Hotel & Uniform ----------
-    { id: "apron", photo: "p-apron", cat: "uniform", name: "Chef & Service Apron", mockup: "apron", price: 349, unit: "piece",
-      desc: "Twill bib apron with adjustable neck strap and waist ties. Logo printed to last through washes.",
-      colors: BASIC_COLORS, sizes: ["Free size"], areas: [PRINT_AREAS[0]], custom: true, minQty: 1 },
+    // a printing service: we print on the customer's aprons but don't sell aprons
+    { id: "apron", photo: "p-apron", cat: "uniform", name: "Apron Printing", price: null, unit: "piece",
+      desc: "We print your logo or design on your aprons — chef, café, hotel and service aprons, single piece to bulk.",
+      custom: false, quote: true, enquiry: true, minQty: 1 },
     { id: "hotel-branding", cat: "uniform", name: "Hotel Branding Transfers", img: "svc-hotel", price: null, unit: "lot",
       desc: "Crest and logo transfers for chef coats, staff uniforms, linens, pillow covers and amenity bags.",
       custom: false, quote: true, minQty: 10 },

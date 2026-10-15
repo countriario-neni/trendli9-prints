@@ -9,14 +9,14 @@
     `<button type="button" class="chip" data-cat="${c.id}" aria-pressed="${c.id === cat}">${esc(c.name)}</button>`).join("");
 
   // showcase colour per product for the catalogue grid
-  const SHOW = { "classic-tee": "Black", "oversized-tee": "Lavender", polo: "Navy", hoodie: "Black", sweatshirt: "Maroon", "kids-tee": "Sky Blue", cap: "Black", tote: "Natural", cushion: "White", apron: "Black" };
+  const SHOW = { "classic-tee": "Black", "oversized-tee": "Lavender", polo: "Navy", hoodie: "Black", sweatshirt: "Maroon", "kids-tee": "Sky Blue", cap: "Black", tote: "Natural", cushion: "White" };
   const showIdx = p => Math.max(0, (p.colors || []).findIndex(c => c.name === SHOW[p.id]));
   // real product photo first; the recolourable mockup is shown once a colour is chosen
   const photo = p => `<img src="assets/img/${p.photo}.webp" alt="${esc(p.name)}" loading="lazy" width="960" height="1200">`;
   const media = (p, color) => (p.photo && !color) ? photo(p) : p.mockup ? MK.svg(p.mockup, { color: color || p.colors[showIdx(p)].hex, label: p.name, inner: MK.sampleArt(p.mockup) })
     : p.icon ? `<div class="icon-tile" style="--tile:${p.tile}" role="img" aria-label="${esc(p.name)}">${I(p.icon)}</div>`
     : `<img src="assets/img/${p.img}.webp" alt="${esc(p.name)}" loading="lazy" width="800" height="600">`;
-  const priceTxt = p => p.price == null ? `<span class="price">Get price</span>` :
+  const priceTxt = p => p.enquiry ? `<span class="price">On enquiry</span>` : p.price == null ? `<span class="price">Get price</span>` :
     `<span class="price"><small>from</small> ${money(p.sizePrice ? Math.min(...Object.values(p.sizePrice)) : p.price)}<small> / ${p.unit}</small></span>`;
 
   function render() {
@@ -36,7 +36,7 @@
           <div class="prod-card__foot">${priceTxt(p)}
             <div style="display:flex;gap:6px">
               ${p.custom ? `<a class="icon-btn" href="studio.html?p=${p.id}" aria-label="Customise ${esc(p.name)} in Design Studio" title="Customise">${I("wand")}</a>` : ""}
-              <button class="btn btn--sm" type="button" data-qv="${p.id}">${p.quote ? "Get quote" : "Choose"}</button>
+              <button class="btn btn--sm" type="button" data-qv="${p.id}">${p.enquiry ? "Enquire" : p.quote ? "Get quote" : "Choose"}</button>
             </div></div>
         </div>
       </article>`).join("") : `<div class="empty" style="grid-column:1/-1">${I("search")}<p><b>No products match.</b><br>Try another search or <a class="link-arrow" href="#" data-wa="Hi Trendli9! I'm looking for: ${esc(q)}">ask us on WhatsApp</a>.</p></div>`;
@@ -55,6 +55,7 @@
 
   function quickView(id) {
     const p = CAT.PRODUCTS.find(x => x.id === id); if (!p) return;
+    if (p.enquiry) { enquiryView(p); return; }
     const hasSizes = p.sizes && p.colors; // garments: size breakdown
     const body = $("#qvBody");
     body.innerHTML = `
@@ -115,6 +116,20 @@
     });
     $("#qvWA").addEventListener("click", () => { const r = read(); openWA(`Hi Trendli9! I'm interested in *${p.name}*${r.color ? ` (${r.color.name})` : ""}${r.variant ? ` — ${r.variant}` : ""}${r.qty ? `, qty ${r.qty}` : ""}.${r.notes ? `\nNotes: ${r.notes}` : ""}\nPlease share price & details.`); });
     update();
+    openLayer($("#qvModal"));
+  }
+
+  // services we do on the customer's own items: description + WhatsApp enquiry only, no price or cart
+  function enquiryView(p) {
+    $("#qvBody").innerHTML = `
+      <div class="qv__media" id="qvMedia">${media(p)}</div>
+      <div class="modal__body">
+        <p class="eyebrow">${esc(CAT.CATEGORIES.find(c => c.id === p.cat).name)}</p>
+        <h2 id="qvTitle" style="font-size:1.5rem">${esc(p.name)}</h2>
+        <p class="muted">${esc(p.desc)}</p>
+        <button class="btn btn--wa btn--block" type="button" id="qvWA">${I("whatsapp")} Enquire on WhatsApp</button>
+      </div>`;
+    $("#qvWA").addEventListener("click", () => openWA(`Hi Trendli9! I'd like to enquire about *${p.name}*.\nApron type & quantity: \nLogo / design: \nDeadline: `));
     openLayer($("#qvModal"));
   }
 
