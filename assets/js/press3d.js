@@ -133,7 +133,7 @@ async function boot() {
 
   const loader = new THREE.TextureLoader();
   const loadTex = url => new Promise(res => loader.load(url, t => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; res(t); }, undefined, () => res(null)));
-  const [logoTex] = await Promise.all([loadTex("assets/img/logo-mark.png")]);
+  const [logoTex] = await Promise.all([loadTex("assets/img/logo-mark.webp")]);
 
   /* ---------- geometry: every part built from code (guide step 03) ---------- */
   const press = new THREE.Group(); scene.add(press);

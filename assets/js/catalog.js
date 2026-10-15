@@ -133,35 +133,68 @@
       custom: false, quote: true, minQty: 1 }
   ];
 
+  // Who our DTF job work is for — mirrors the studio's WhatsApp auto-reply.
+  // services.html audience blocks are generated from this (node tools/build-services.js).
+  const AUDIENCES = [
+    { id: "for-printers", name: "T-shirt printers & clothing brands", short: "Printers & brands", icon: "shirt", img: "p-rack-printed",
+      title: "Transfers on demand, ready to press.",
+      who: "Print shops, resellers and clothing labels who want dependable DTF output without running a printer of their own.",
+      what: "We print your gang sheets or single designs, then powder, cure and pack them ready to press — or press them onto your blanks for you.",
+      jobs: ["Gang sheets at ₹250 per metre", "Ready-to-press logo to A3 transfers", "Drops on tees, oversized & hoodies", "Repeat runs from designs on file"],
+      wa: "I'm a T-shirt printer / clothing brand and need DTF job work.",
+      link: { href: "gang-sheet.html", label: "Build a gang sheet" } },
+    { id: "for-manufacturers", name: "Garment manufacturers", short: "Garment manufacturers", icon: "building", img: "p-rack-black",
+      title: "Print for production lots.",
+      who: "Garment and textile units adding prints to their lots without setting up a print floor.",
+      what: "We print transfers to your size-graded artwork and lot quantities for you to press in-house — or send the garments and we print and return them pressed.",
+      jobs: ["Chest, back & sleeve prints by the lot", "Size-graded artwork sets", "Fabric panels & made-ups", "DTF inks, film & spares for in-house lines"],
+      wa: "I'm a garment manufacturer and need DTF job work for a production lot.",
+      link: { href: "#spares", label: "Spares & consumables" } },
+    { id: "for-boutiques", name: "Boutiques & fashion businesses", short: "Boutiques & fashion", icon: "store", img: "g-blouse",
+      title: "Exclusive designs, small runs.",
+      who: "Boutiques and fashion labels making ethnic and contemporary pieces in small batches.",
+      what: "We print motifs, borders and neckline art onto sarees, blouses, kurtis and dupattas — fine linework on delicate fabrics, without embroidery lead-times.",
+      jobs: ["Saree motifs, borders & pallu art", "Designer blouse necklines", "Kurtis, lehengas & kidswear", "A sample piece before the run"],
+      wa: "I run a boutique / fashion business and need DTF job work.",
+      link: { href: "#saree-blouse", label: "Saree & blouse prints" } },
+    { id: "for-bulk", name: "Bulk & B2B orders", short: "Bulk & B2B", icon: "package", img: "svc-bulk",
+      title: "Big orders, handled end to end.",
+      who: "Companies, hotels, schools and event teams ordering uniforms and merch in volume.",
+      what: "We work from your size sheet — names and numbers, crest transfers built for commercial laundering — and pack size-wise, with updates on WhatsApp.",
+      jobs: ["Corporate & event T-shirts", "Hotel & staff uniforms", "Chef coats, aprons & linen", "Volume pricing (indicative, up to 20% off)"],
+      wa: "I have a bulk / B2B order and need a DTF printing quote.",
+      link: { href: "#corporate-bulk", label: "Corporate & bulk orders" } }
+  ];
+
   const SERVICES = [
-    { id: "dtf-transfer", name: "DTF Transfer Printing", img: "svc-dtf", shop: "dtf",
+    { id: "dtf-transfer", aud: "for-printers", tag: "₹250 / metre", name: "DTF Transfer Printing", img: "svc-dtf", shop: "dtf",
       short: "Complete DTF job work — gang sheets, ready-to-press transfers, any fabric.",
       long: "Our production-grade DTF line prints razor-sharp, stretchable transfers that work on cotton, polyester, blends, denim, nylon and leather. Send a gang sheet or a single design — we print, powder, cure and hand you transfers ready to press.",
       points: ["Complete DTF transfer printing job work", "Gang sheets from ₹250 per metre", "Hot & cold peel, soft hand-feel", "Quick turnaround on standard orders"] },
-    { id: "custom-apparel", name: "Custom Apparel Printing", img: "svc-apparel", shop: "apparel",
+    { id: "custom-apparel", aud: "for-printers", name: "Custom Apparel Printing", img: "svc-apparel", shop: "apparel",
       short: "T-shirts, hoodies, polos and kidswear — single piece to thousands.",
       long: "Design your own merch or bring your artwork. We print on premium blanks or garments you supply, with full-colour detail, gradients and photo-quality results that survive the wash.",
       points: ["Custom T-shirt printing", "Clothing brand & reseller job work", "Front, back and sleeve prints", "No minimum order on blanks"] },
-    { id: "saree-blouse", name: "Saree & Blouse Prints", img: "svc-saree", shop: "ethnic",
-      short: "Motifs, borders and pallu art printed on silk, georgette and cotton.",
-      long: "Bring traditional and contemporary artwork onto ethnic wear. Our transfers keep fine linework and rich colour on delicate fabrics, so boutiques can offer exclusive designs without embroidery lead-times.",
-      points: ["Saree & blouse printing", "Boutique & garment printing", "Works on delicate fabrics", "Exclusive designs for boutiques"] },
-    { id: "hotel-branding", name: "Hotel Branding Transfers", img: "svc-hotel", shop: "uniform",
-      short: "Crests and logos for uniforms, linens and amenities.",
-      long: "Consistent brand identity across every textile touchpoint — chef coats, front-office uniforms, aprons, pillow covers and laundry bags — with transfers built for commercial laundering.",
-      points: ["Hotel & uniform printing", "Industrial-wash durability", "Brand-colour matched logos", "Repeat orders on file"] },
-    { id: "corporate-bulk", name: "Corporate & Bulk Orders", img: "svc-bulk", shop: "apparel",
-      short: "Event tees, staff uniforms and merch kits with bulk pricing.",
-      long: "From product launches to annual days, we handle sizing sheets, individual names and numbers, packing and delivery — with tiered pricing that rewards volume.",
-      points: ["Bulk & corporate T-shirt orders", "Names & numbers personalisation", "Size-wise packing", "Volume discounts up to 20%"] },
-    { id: "home-decor", name: "Home Décor Fabric Printing", img: "svc-decor", shop: "home",
+    { id: "home-decor", aud: "for-manufacturers", name: "Home Décor Fabric Printing", img: "svc-decor", shop: "home",
       short: "Cushions, runners, curtains and tapestries printed to your theme.",
       long: "Turn photos, patterns and brand art into soft furnishings for homes, cafés and hotels. Ideal for gifting, interiors and themed events.",
       points: ["Cushion covers & runners", "Wall tapestries & curtains", "Photo-quality detail", "Personalised gifting"] },
-    { id: "spares", name: "DTF Spare Parts & Consumables", img: "svc-consumables", shop: "consumables",
+    { id: "spares", aud: "for-manufacturers", name: "DTF Spare Parts & Consumables", img: "svc-consumables", shop: "consumables",
       short: "Inks, film, powder, printheads and maintenance kits.",
       long: "Run your own DTF setup? We supply the same tested consumables and spares we trust on our production floor, with honest advice on maintenance and troubleshooting.",
-      points: ["DTF spare parts & consumables", "Inks, PET film & powder", "Printheads & maintenance kits", "Technical guidance included"] }
+      points: ["DTF spare parts & consumables", "Inks, PET film & powder", "Printheads & maintenance kits", "Technical guidance included"] },
+    { id: "saree-blouse", aud: "for-boutiques", name: "Saree & Blouse Prints", img: "svc-saree", shop: "ethnic",
+      short: "Motifs, borders and pallu art printed on silk, georgette and cotton.",
+      long: "Bring traditional and contemporary artwork onto ethnic wear. Our transfers keep fine linework and rich colour on delicate fabrics, so boutiques can offer exclusive designs without embroidery lead-times.",
+      points: ["Saree & blouse printing", "Boutique & garment printing", "Works on delicate fabrics", "Exclusive designs for boutiques"] },
+    { id: "corporate-bulk", aud: "for-bulk", name: "Corporate & Bulk Orders", img: "svc-bulk", shop: "apparel",
+      short: "Event tees, staff uniforms and merch kits with bulk pricing.",
+      long: "From product launches to annual days, we handle sizing sheets, individual names and numbers, packing and delivery — with tiered pricing that rewards volume.",
+      points: ["Bulk & corporate T-shirt orders", "Names & numbers personalisation", "Size-wise packing", "Volume discounts up to 20% (indicative)"] },
+    { id: "hotel-branding", aud: "for-bulk", name: "Hotel Branding Transfers", img: "svc-hotel", shop: "uniform",
+      short: "Crests and logos for uniforms, linens and amenities.",
+      long: "Consistent brand identity across every textile touchpoint — chef coats, front-office uniforms, aprons, pillow covers and laundry bags — with transfers built for commercial laundering.",
+      points: ["Hotel & uniform printing", "Industrial-wash durability", "Brand-colour matched logos", "Repeat orders on file"] }
   ];
 
   const GALLERY = [
@@ -179,5 +212,5 @@
     { img: "svc-consumables", cap: "DTF inks, film & powder", cat: "dtf", w: 1024, h: 768 }
   ];
 
-  window.T9_CATALOG = { CATEGORIES, PRODUCTS, SERVICES, PRINT_AREAS, TIERS, GALLERY };
+  window.T9_CATALOG = { CATEGORIES, PRODUCTS, AUDIENCES, SERVICES, PRINT_AREAS, TIERS, GALLERY };
 })();

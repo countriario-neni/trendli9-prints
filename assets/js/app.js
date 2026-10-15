@@ -123,8 +123,8 @@
     <header class="site-header" id="top">
       <div class="container site-header__inner">
         <a class="brand" href="index.html" aria-label="${esc(C.brand)} home">
-          <img class="brand__mark" src="assets/img/logo-mark.png" alt="" width="66" height="46">
-          <img class="brand__word" src="assets/img/logo-word.png" alt="${esc(C.brand)}" width="168" height="40">
+          <img class="brand__mark" src="assets/img/logo-mark-sm.webp" alt="" width="66" height="46">
+          <img class="brand__word" src="assets/img/logo-word.webp" alt="${esc(C.brand)}" width="168" height="40">
         </a>
         <nav class="nav" id="nav" aria-label="Main">
           <button class="icon-btn nav__close" type="button" aria-label="Close menu" data-close-nav>${I("close")}</button>
@@ -154,7 +154,7 @@
       <div class="container">
         <div class="footer-grid">
           <div class="footer-brand">
-            <img src="assets/img/logo-word.png" alt="${esc(C.brand)}" width="252" height="60" loading="lazy">
+            <img src="assets/img/logo-word.webp" alt="${esc(C.brand)}" width="252" height="60" loading="lazy">
             <p>${esc(C.tagline)} Premium DTF transfers, custom apparel, saree & blouse prints, hotel branding and DTF consumables — from ${esc(a.city)} to all of India.</p>
             <span class="unit-pill">${I("sparkle")} ${esc(C.parent)}</span>
             <div class="socials">
@@ -341,7 +341,7 @@
         <button class="fab fab--bot" type="button" id="botBtn" aria-label="Open Trendli9 assistant" aria-controls="chat" aria-expanded="false">${I("bot")}<span class="dot"></span></button>
       </div>
       <section class="chat" id="chat" aria-label="Trendli9 assistant" aria-hidden="true">
-        <div class="chat__head"><div class="chat__avatar"><img src="assets/img/logo-mark.png" alt=""></div>
+        <div class="chat__head"><div class="chat__avatar"><img src="assets/img/logo-mark-sm.webp" alt=""></div>
           <div><b>Trendli9 Assistant</b><small>Typically replies instantly</small></div>
           <button class="icon-btn" type="button" id="chatClose" aria-label="Close assistant">${I("close")}</button></div>
         <div class="chat__body" id="chatBody" aria-live="polite"></div>

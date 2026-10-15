@@ -17,9 +17,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="preload" as="image" href="assets/img/hero.webp">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261015e">
-  <link rel="stylesheet" href="assets/css/threeui.css?v=20261015e">
+  <link rel="preload" as="image" href="assets/img/hero.webp" imagesrcset="assets/img/hero-1024.webp 1024w, assets/img/hero.webp 2048w" imagesizes="100vw">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261015g">
+  <link rel="stylesheet" href="assets/css/threeui.css?v=20261015g">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"LocalBusiness","name":"Trendli9 Prints","description":"DTF transfer printing, custom apparel printing, saree & blouse prints, hotel branding transfers, corporate & bulk orders, home décor fabric printing and DTF spare parts & consumables.","telephone":"+91-9932627413","email":"Trendli9prints@gmail.com","image":"assets/img/og-image.jpg","parentOrganization":{"@type":"Organization","name":"Colorflu"},"address":{"@type":"PostalAddress","streetAddress":"LG Towers, Flat No. 101, Krishna Gardens Street, Dabagardens","addressLocality":"Visakhapatnam","addressRegion":"Andhra Pradesh","addressCountry":"IN"},"priceRange":"₹₹","makesOffer":{"@type":"Offer","name":"DTF Transfer Printing","price":"250","priceCurrency":"INR","unitText":"per metre"}}
   </script>
@@ -32,7 +32,7 @@
     <section class="xp" id="xp" aria-label="Interactive 3D heat press">
       <div class="xp__stage">
         <canvas class="xp__canvas" aria-hidden="true"></canvas>
-        <div class="xp__fallback" aria-hidden="true"><img src="assets/img/hero.webp" alt="" width="2048" height="1152" fetchpriority="high"></div>
+        <div class="xp__fallback" aria-hidden="true"><img src="assets/img/hero.webp" srcset="assets/img/hero-1024.webp 1024w, assets/img/hero.webp 2048w" sizes="100vw" alt="" width="2048" height="1152" fetchpriority="high"></div>
         <div class="xp__labels" aria-hidden="true"><svg class="xp__lines" preserveAspectRatio="none"></svg></div>
         <div class="xp__loader" aria-hidden="true"><span></span>Warming up the press…</div>
         <div class="xp__hud">
@@ -141,31 +141,41 @@
       </div>
     </section>
 
-    <!-- THREE PROBLEMS -->
+    <!-- WHO WE DO JOB WORK FOR (four audiences) -->
     <section class="section section--paper" aria-labelledby="probTitle">
       <div class="container">
         <div class="section-head">
-          <div><p class="eyebrow">Who we work with</p><h2 id="probTitle">Print without <span class="grad-text">the runaround.</span></h2></div>
-          <p class="muted">Whether you run a print shop, a boutique or a hotel, the job is the same: the right print, on time, without chasing anyone. Here is how that looks for you.</p>
+          <div><p class="eyebrow">DTF job work</p><h2 id="probTitle">Print without <span class="grad-text">the runaround.</span></h2></div>
+          <p class="muted">Professional DTF printing job work for four kinds of business. Share your design, quantity and fabric — we print, press and keep you updated on WhatsApp.</p>
         </div>
-        <div class="problems" tabindex="0" aria-label="Problems we solve — scroll sideways on mobile">
+        <div class="problems problems--4" tabindex="0" aria-label="Who we do job work for — scroll sideways on mobile">
           <article class="problem reveal">
-            <p class="problem__n"><i data-icon="printer"></i> Print shops & resellers</p>
-            <h3>Transfers, blanks and spares — sorted.</h3>
-            <p>One studio for gang sheets, garments, inks, film and printheads, so a single delay doesn't stall your whole week.</p>
-            <p class="problem__fix"><i data-icon="check"></i> Free gang-sheet & halftone tools to prep files yourself</p>
+            <p class="problem__n"><i data-icon="shirt"></i> T-shirt printers & clothing brands</p>
+            <h3>Transfers on demand, ready to press.</h3>
+            <p>Gang sheets and single designs printed, powdered and cured — or pressed onto your blanks for you.</p>
+            <p class="problem__fix"><i data-icon="check"></i> Gang sheets at ₹250 per metre</p>
+            <a class="link-arrow problem__go" href="services.html#for-printers">Job work for printers & brands <i data-icon="arrow"></i></a>
           </article>
           <article class="problem reveal" data-delay="1">
-            <p class="problem__n"><i data-icon="store"></i> Brands & boutiques</p>
-            <h3>Small runs, big ideas.</h3>
-            <p>Test a drop with a handful of pieces, or offer exclusive saree and blouse motifs without waiting weeks for embroidery.</p>
-            <p class="problem__fix"><i data-icon="check"></i> Single-piece orders · designs kept on file for repeats</p>
+            <p class="problem__n"><i data-icon="building"></i> Garment manufacturers</p>
+            <h3>Print for production lots.</h3>
+            <p>Transfers to your size-graded artwork for in-house pressing, or send the garments and we return them pressed.</p>
+            <p class="problem__fix"><i data-icon="check"></i> DTF inks, film & spares for in-house lines</p>
+            <a class="link-arrow problem__go" href="services.html#for-manufacturers">Job work for manufacturers <i data-icon="arrow"></i></a>
           </article>
           <article class="problem reveal" data-delay="2">
-            <p class="problem__n"><i data-icon="building"></i> Corporates, hotels & events</p>
-            <h3>Uniform orders that arrive right.</h3>
-            <p>Size sheets, names and numbers, crest transfers for chef coats and linen — packed size-wise and updated on WhatsApp.</p>
-            <p class="problem__fix"><i data-icon="check"></i> Volume pricing up to 20% off</p>
+            <p class="problem__n"><i data-icon="store"></i> Boutiques & fashion businesses</p>
+            <h3>Exclusive designs, small runs.</h3>
+            <p>Saree motifs, blouse necklines and kurti prints with fine linework — without waiting weeks for embroidery.</p>
+            <p class="problem__fix"><i data-icon="check"></i> A sample piece before the run</p>
+            <a class="link-arrow problem__go" href="services.html#for-boutiques">Job work for boutiques <i data-icon="arrow"></i></a>
+          </article>
+          <article class="problem reveal" data-delay="3">
+            <p class="problem__n"><i data-icon="package"></i> Bulk & B2B orders</p>
+            <h3>Big orders, handled end to end.</h3>
+            <p>Corporate tees, hotel and staff uniforms — size sheets, names and numbers, packed size-wise.</p>
+            <p class="problem__fix"><i data-icon="check"></i> Volume pricing up to 20% off (indicative)</p>
+            <a class="link-arrow problem__go" href="services.html#for-bulk">Bulk & B2B job work <i data-icon="arrow"></i></a>
           </article>
         </div>
         
@@ -222,26 +232,32 @@
       <div class="container">
         <div class="section-head">
           <div><p class="eyebrow">Start your order</p><h2 id="laneTitle">How would you <span class="grad-text">like to print?</span></h2></div>
-          <p class="muted">Pick the route that fits — you can always switch to WhatsApp and talk it through with us.</p>
+          <p class="muted">Pick the route that fits your business — you can always switch to WhatsApp and talk it through with us.</p>
         </div>
-        <div class="lanes">
-          <a class="lane lane--feature reveal" href="studio.html">
-            <span class="lane__n"><i data-icon="wand"></i> Most popular</span>
-            <h3>Design it yourself</h3>
-            <p>Choose a garment, place your artwork in the Design Studio and see the price. We print, press and pack — pickup in Vizag or courier across India.</p>
-            <span class="lane__go">Open Design Studio <i data-icon="arrow"></i></span>
+        <div class="lanes lanes--4">
+          <a class="lane lane--feature reveal" href="services.html#quote">
+            <span class="lane__n"><i data-icon="whatsapp"></i> DTF job work</span>
+            <h3>Send us the job</h3>
+            <p>Share your name or business, quantity, artwork, fabric and print requirements — we reply on WhatsApp with a quote.</p>
+            <span class="lane__go">Get a job-work quote <i data-icon="arrow"></i></span>
           </a>
           <a class="lane reveal" data-delay="1" href="gang-sheet.html">
-            <span class="lane__n"><i data-icon="layers"></i> For print shops</span>
+            <span class="lane__n"><i data-icon="shirt"></i> T-shirt printers & brands</span>
             <h3>Order transfers only</h3>
-            <p>Gang sheets from ₹250/m and ready-to-press transfers you apply yourself.</p>
+            <p>Gang sheets at ₹250/m and ready-to-press transfers you apply yourself.</p>
             <span class="lane__go">Build a gang sheet <i data-icon="arrow"></i></span>
           </a>
-          <a class="lane reveal" data-delay="2" href="services.html#corporate-bulk">
-            <span class="lane__n"><i data-icon="package"></i> For bulk</span>
+          <a class="lane reveal" data-delay="2" href="services.html#for-bulk">
+            <span class="lane__n"><i data-icon="package"></i> Garment units & bulk orders</span>
             <h3>Hand us the whole job</h3>
-            <p>Uniforms, events, hotel branding and clothing-brand job work — sizing, printing and packing handled.</p>
-            <span class="lane__go">See bulk services <i data-icon="arrow"></i></span>
+            <p>Production lots, uniforms, hotel branding and corporate orders — printing, pressing and size-wise packing handled.</p>
+            <span class="lane__go">See bulk & B2B job work <i data-icon="arrow"></i></span>
+          </a>
+          <a class="lane reveal" data-delay="3" href="studio.html">
+            <span class="lane__n"><i data-icon="store"></i> Boutiques & one-off pieces</span>
+            <h3>Design it yourself</h3>
+            <p>Place your artwork on a garment in the Design Studio and see the price. Pickup in Vizag or courier across India.</p>
+            <span class="lane__go">Open Design Studio <i data-icon="arrow"></i></span>
           </a>
         </div>
       </div>
@@ -261,7 +277,7 @@
     <section class="section" aria-labelledby="igTitle">
       <div class="container">
         <div class="ig-head">
-          <div class="ig-avatar"><img src="assets/img/logo-mark.png" alt="" width="76" height="76"></div>
+          <div class="ig-avatar"><img src="assets/img/logo-mark-sm.webp" alt="" width="76" height="76"></div>
           <div style="flex:1;min-width:220px">
             <p class="eyebrow" style="margin-bottom:6px">Instagram</p>
             <h2 id="igTitle" style="margin:0;font-size:clamp(1.4rem,3vw,2rem)">@<span class="ig-handle">trendli9prints</span></h2>
@@ -304,14 +320,21 @@
 
   <div id="site-footer"></div>
 
-  <script src="assets/js/config.js?v=20261015e"></script>
-  <script src="assets/js/catalog.js?v=20261015e"></script>
-  <script src="assets/js/icons.js?v=20261015e"></script>
-  <script src="assets/js/mockups.js?v=20261015e"></script>
-  <script src="assets/js/app.js?v=20261015e"></script>
-  <script src="assets/js/home.js?v=20261015e"></script>
-  <script src="assets/js/threeui/liquid-metal.js?v=20261015e"></script>
+  <script src="assets/js/config.js?v=20261015g"></script>
+  <script src="assets/js/catalog.js?v=20261015g"></script>
+  <script src="assets/js/icons.js?v=20261015g"></script>
+  <script src="assets/js/mockups.js?v=20261015g"></script>
+  <script src="assets/js/app.js?v=20261015g"></script>
+  <script src="assets/js/home.js?v=20261015g"></script>
+  <script src="assets/js/threeui/liquid-metal.js?v=20261015g"></script>
   <script type="importmap">{ "imports": { "three": "./assets/vendor/three/three.module.js", "three/addons/": "./assets/vendor/three/addons/" } }</script>
-  <script type="module" src="assets/js/press3d.js?v=20261015e"></script>
+  <link rel="modulepreload" href="assets/vendor/three/three.module.js">
+  <link rel="modulepreload" href="assets/vendor/three/three.core.js">
+  <link rel="modulepreload" href="assets/vendor/three/addons/postprocessing/EffectComposer.js">
+  <link rel="modulepreload" href="assets/vendor/three/addons/postprocessing/RenderPass.js">
+  <link rel="modulepreload" href="assets/vendor/three/addons/postprocessing/UnrealBloomPass.js">
+  <link rel="modulepreload" href="assets/vendor/three/addons/postprocessing/ShaderPass.js">
+  <link rel="modulepreload" href="assets/vendor/three/addons/postprocessing/OutputPass.js">
+  <script type="module" async src="assets/js/press3d.js?v=20261015g"></script>
 </body>
 </html>

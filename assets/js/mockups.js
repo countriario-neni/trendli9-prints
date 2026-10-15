@@ -106,7 +106,7 @@
   }
 
   /** Sample print (brand splash) fitted into the print area — used for catalogue previews */
-  function sampleArt(type, src = "assets/img/logo-mark.png", ar = 365 / 520) {
+  function sampleArt(type, src = "assets/img/logo-mark.webp", ar = 365 / 520) {
     const a = (M[type] || M.tee).area, w = Math.min(a.w * .78, a.h * .78 / ar), h = w * ar;
     return `<image href="${src}" x="${a.x + (a.w - w) / 2}" y="${a.y + Math.min(a.h * .12, (a.h - h) / 2)}" width="${w}" height="${h}"/>`;
   }
