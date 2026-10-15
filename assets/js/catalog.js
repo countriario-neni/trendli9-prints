@@ -200,15 +200,15 @@
 
   const GALLERY = [
     { img: "g-lion-tee", cap: "Rainbow lion — DTF on black tee", cat: "apparel", w: 1024, h: 1024 },
-    { img: "svc-saree", cap: "Peacock & lotus saree motif", cat: "ethnic", w: 1024, h: 768 },
+    { img: "svc-saree", cap: "Printed floral saree", cat: "ethnic", w: 1024, h: 768 },
     { img: "svc-dtf", cap: "Full-colour DTF gang sheets", cat: "dtf", w: 1024, h: 768 },
-    { img: "g-blouse", cap: "Traditional neckline print on blouse", cat: "ethnic", w: 1024, h: 1024 },
+    { img: "g-blouse", cap: "Block-print style blouse", cat: "ethnic", w: 1024, h: 1024 },
     { img: "process-heatpress", cap: "Peeling a fresh DTF transfer", cat: "dtf", w: 1024, h: 768 },
     { img: "g-kids", cap: "Kids tee & cap set", cat: "apparel", w: 1024, h: 1024 },
     { img: "svc-hotel", cap: "Hotel uniform crest transfers", cat: "uniform", w: 1024, h: 768 },
     { img: "svc-apparel", cap: "Streetwear capsule — tees, hoodie, tote", cat: "apparel", w: 1024, h: 768 },
     { img: "g-hoodie", cap: "Back print on a mustard hoodie", cat: "apparel", w: 1000, h: 1500 },
-    { img: "svc-decor", cap: "Printed cushion covers & table runner", cat: "home", w: 1024, h: 768 },
+    { img: "svc-decor", cap: "Plant-print cushion covers", cat: "home", w: 1024, h: 768 },
     { img: "svc-bulk", cap: "Corporate bulk polo order", cat: "uniform", w: 1024, h: 768 },
     { img: "svc-consumables", cap: "DTF inks, film & powder", cat: "dtf", w: 1024, h: 768 }
   ];

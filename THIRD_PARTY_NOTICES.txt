@@ -66,17 +66,26 @@ THE SOFTWARE.
 Photography — Unsplash License (https://unsplash.com/license)
 Free for commercial use; credit given as courtesy.
 ============================================================
-p-classic-tee.webp — photo by Faith & Yarn — https://unsplash.com/photos/Wr0TpKqf26s
-p-oversized-tee.webp — photo by Anton K Wibowo — https://unsplash.com/photos/y8JrDRdwO0M
-p-polo.webp — photo by TuanAnh Blue — https://unsplash.com/photos/K1qq6F09FhY
-p-hoodie.webp — photo by Don Pham — https://unsplash.com/photos/QWlXPidIgI8
-p-sweatshirt.webp — photo by Antoine Transon — https://unsplash.com/photos/RIinxQosgrc
-p-kids-tee.webp — photo by BLOG REGION — https://unsplash.com/photos/9Izhj-SxrnI
-p-cap.webp — photo by Mediamodifier — https://unsplash.com/photos/t8HiP3e5abg
-p-tote.webp — photo by Kelly Sikkema — https://unsplash.com/photos/1Pgq9ZpIatI
-p-cushion.webp — photo by Julia — https://unsplash.com/photos/_9gxlIXdqDQ
-p-apron.webp — photo by Golden Horn Bridge — https://unsplash.com/photos/k7qAyA_sf_8
 g-hoodie.webp — photo by Gab — https://unsplash.com/photos/mWSXyWe2H9Q
 p-rack-printed.webp — photo by Anthony Roberts — https://unsplash.com/photos/-i-pE89uQRk
 p-rack-black.webp — photo by Fabio Alves — https://unsplash.com/photos/eAUE_FmclYE
 p-hoodie-grey.webp — photo by Jannes Jacobs — https://unsplash.com/photos/a_KC8ocB650
+g-blouse.webp — photo by Shiv Narayan Das — https://unsplash.com/photos/woman-leans-against-a-tree-wearing-a-beautiful-top-3sqPAxP09OA
+
+
+============================================================
+Photography — Pexels License (https://www.pexels.com/license/)
+Free for commercial use; credit given as courtesy.
+============================================================
+p-classic-tee.webp — photo by BANDAR BAANT — https://www.pexels.com/photo/man-wearing-oversized-printed-t-shirt-with-bold-design-37186394/
+p-oversized-tee.webp — photo by Aj Collins Artistry — https://www.pexels.com/photo/fashionable-t-shirt-with-royal-emblem-design-33258841/
+p-polo.webp — photo by Avinash K Nirala — https://www.pexels.com/photo/a-portrait-of-a-bearded-man-with-his-thumbs-up-12113645/
+p-hoodie.webp — photo by Panther Graphic Rwanda — https://www.pexels.com/photo/casual-portrait-of-a-man-in-grey-hoodie-35342196/
+p-sweatshirt.webp — photo by addy bronzzz — https://www.pexels.com/photo/young-woman-in-casual-wear-posing-on-pink-background-16751300/
+p-kids-tee.webp — photo by TONI&GUY PONDICHERRY — https://www.pexels.com/photo/sitting-boy-in-white-t-shirt-17328939/
+p-cap.webp — photo by Alex Urezkov — https://www.pexels.com/photo/black-katana-sword-and-black-baseball-cap-on-concrete-surface-9935865/
+p-tote.webp — photo by Alexis Ricardo Alaurin — https://www.pexels.com/photo/a-tote-bag-with-a-picture-of-a-camera-on-it-27849696/
+p-cushion.webp — photo by Leticia Curvelo — https://www.pexels.com/photo/artistic-decorative-cushion-set-with-abstract-design-31783193/
+p-apron.webp — photo by Boko Shots — https://www.pexels.com/photo/a-woman-in-an-apron-holding-a-plate-and-a-knife-27781460/
+svc-saree.webp — photo by GM ISLAM — https://www.pexels.com/photo/a-woman-in-red-and-blue-saree-dress-7275701/
+svc-decor.webp — photo by Samer Daboul — https://www.pexels.com/photo/close-up-shot-of-plant-printed-throw-pillows-7885120/
