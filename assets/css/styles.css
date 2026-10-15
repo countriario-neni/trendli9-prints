@@ -721,7 +721,11 @@ a.info-item:hover { transform: translateY(-3px); box-shadow: var(--sh-2); }
 .xp-hint { display: flex; align-items: center; gap: 8px; font-size: .88rem; font-weight: 700; color: var(--muted-on-dark) !important; }
 .xp-hint svg { width: 18px; color: var(--yellow); }
 .xp-tags { list-style: none; padding: 0; margin: 18px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
-.xp-tags li { padding: 8px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.06); font-weight: 700; font-size: .9rem; }
+.xp-tags button { padding: 8px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.06); color: #fff; font: inherit; font-weight: 700; font-size: .9rem; cursor: pointer; transition: background .2s, color .2s, border-color .2s; }
+.xp-tags button:hover { border-color: rgba(255,255,255,.6); }
+.xp-tags button[aria-pressed="true"] { background: #fff; color: var(--ink); border-color: #fff; }
+.xp-fabric { margin: 16px 0 0; font-weight: 600; color: #fff; }
+.xp-fabric__hint { margin: 4px 0 0; font-size: .82rem; color: var(--muted-on-dark); }
 .xp--static .xp-beat .xp-card { opacity: 1; transform: none; }
 .xp--static { height: auto; }
 .xp--static .xp__stage { position: absolute; inset: 0; height: 100%; }

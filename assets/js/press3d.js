@@ -69,6 +69,28 @@ function brushedTexture(kind = "striped", size = 256) {
 }
 
 /* ---------------- boot ---------------- */
+/* fabric picker (beat 03): typical DTF press recipe per fabric; the 3D scene re-dresses the garment */
+const FABRICS = {
+  cotton:    { color: "#121214", rough: .95, sheen: 1,  temp: 160, secs: 15, pr: "medium pressure" },
+  polyester: { color: "#1f47b8", rough: .55, sheen: .6, temp: 135, secs: 10, pr: "medium pressure" },
+  blends:    { color: "#8b8e95", rough: .9,  sheen: 1,  temp: 150, secs: 12, pr: "medium pressure" },
+  silk:      { color: "#9c0f5a", rough: .3,  sheen: 1,  temp: 130, secs: 8,  pr: "light pressure, cover sheet" },
+  denim:     { color: "#2b3d63", rough: .95, sheen: .5, temp: 165, secs: 15, pr: "firm pressure" },
+  fleece:    { color: "#c98d1c", rough: 1,   sheen: 1,  temp: 155, secs: 12, pr: "medium pressure" },
+  nylon:     { color: "#3f4b30", rough: .4,  sheen: .4, temp: 130, secs: 8,  pr: "light pressure, cover sheet" },
+  canvas:    { color: "#d9ceb2", rough: .95, sheen: .3, temp: 165, secs: 15, pr: "firm pressure" },
+  leather:   { color: "#5a3220", rough: .45, sheen: .2, temp: 130, secs: 10, pr: "light pressure, cover sheet" },
+};
+let fab = FABRICS.cotton, onFabric = null;
+const recipe = f => `${f.temp} °C · ${f.secs} s · ${f.pr}`;
+root?.querySelectorAll("[data-fabric]").forEach(b => b.addEventListener("click", () => {
+  const f = FABRICS[b.dataset.fabric]; if (!f || f === fab) return;
+  fab = f;
+  root.querySelectorAll("[data-fabric]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  const note = root.querySelector(".xp-fabric"); if (note) note.innerHTML = `<b>${b.textContent}</b> · ${recipe(f)}`;
+  onFabric?.();
+}));
+
 if (root && canvas) boot().catch(e => { console.warn(e); fallback("init error"); });
 
 async function boot() {
@@ -354,10 +376,17 @@ async function boot() {
   function tick() { const a = audio(); if (!a) return; const t = a.currentTime, o = a.createOscillator(), g = a.createGain(); o.type = "square"; o.frequency.value = 2100; g.gain.setValueAtTime(.03, t); g.gain.exponentialRampToValueAtTime(.0001, t + .03); o.connect(g).connect(a.destination); o.start(t); o.stop(t + .04); }
 
   const setStatus = t => { if (status) status.textContent = t; };
+  const fabColor = new THREE.Color(fab.color);
+  onFabric = () => {   // new fabric on the platen: fresh garment, new recipe
+    fabColor.set(fab.color);
+    if (S.holding) return;
+    S.done = false; S.heat = 0; S.peel = 0; reveal.value = 0; filmInkMat.opacity = 1; stopHiss();
+    holdLabel.textContent = "Hold to press"; setStatus(`Ready · ${recipe(fab)}`);
+  };
   function beginHold(e) {
     e?.preventDefault?.();
     if (S.done) { // reset for another go
-      S.done = false; S.peel = 0; reveal.value = 0; filmInkMat.opacity = 1; holdLabel.textContent = "Hold to press"; setStatus("Ready · 160 °C · 15 s"); return;
+      S.done = false; S.peel = 0; reveal.value = 0; filmInkMat.opacity = 1; holdLabel.textContent = "Hold to press"; setStatus(`Ready · ${recipe(fab)}`); return;
     }
     S.holding = true; holdBtn.classList.add("is-holding"); audio();
     if (navigator.vibrate) navigator.vibrate(15);
@@ -452,14 +481,15 @@ async function boot() {
     if (S.pressT > .97 && S.holding && !S.done) {
       if (S.heat === 0) { clunk(); startHiss(); setStatus("Pressing…"); }
       S.heat = Math.min(1, S.heat + dt / HEAT_SECS);
-      const secsLeft = Math.ceil(15 * (1 - S.heat)); if (secsLeft !== beatSecs) { beatSecs = secsLeft; tick(); }
+      const secsLeft = Math.ceil(fab.secs * (1 - S.heat)); if (secsLeft !== beatSecs) { beatSecs = secsLeft; tick(); }
       reveal.value = Math.max(reveal.value, S.heat * .2);
       if (S.heat >= 1) { S.done = true; S.holding = false; holdBtn?.classList.remove("is-holding"); stopHiss(); ding(); setStatus("Done! Peeling the film…"); holdLabel.textContent = "Press again"; }
     } else if (!S.holding && !S.done && S.heat > 0) { S.heat = Math.max(0, S.heat - dt * .8); if (S.heat === 0) { stopHiss(); beatSecs = -1; } }
     if (!S.holding) stopHiss();
     if (S.done) { S.peel = Math.min(1, S.peel + dt * .55); reveal.value = Math.min(1, .2 + easeOut(S.peel) * .8); filmInkMat.opacity = 1 - easeOut(S.peel); if (S.peel >= 1) setStatus("Flawless. That's the Trendli9 finish."); }
-    S.temp = damp(S.temp, S.holding && S.pressT > .9 ? 162 : 158 + Math.sin(S.time * .7) * 1.5, 2, dt);
-    drawDisplay(S.temp, S.done ? 0 : Math.ceil(15 * (1 - S.heat)), S.done ? "done" : S.heat > 0 ? "press" : "ready");
+    S.temp = damp(S.temp, S.holding && S.pressT > .9 ? fab.temp + 2 : fab.temp - 2 + Math.sin(S.time * .7) * 1.5, 2, dt);
+    drawDisplay(S.temp, S.done ? 0 : Math.ceil(fab.secs * (1 - S.heat)), S.done ? "done" : S.heat > 0 ? "press" : "ready");
+    fabric.color.lerp(fabColor, 1 - Math.exp(-6 * dt)); fabric.roughness = damp(fabric.roughness, fab.rough, 6, dt); fabric.sheen = damp(fabric.sheen, fab.sheen, 6, dt);
     if (ring) ring.style.strokeDashoffset = String(1 - (S.done ? 1 : S.heat));
 
     // lid angle: open → closed by press; explode shot holds it nearly closed
