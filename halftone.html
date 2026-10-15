@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Free DTF halftone generator & black background remover — Trendli9 Prints</title>
+  <meta name="description" content="Free online DTF halftone tool: upload artwork, auto-detect and remove a black or white background, turn soft edges and gradients into clean halftone dots and download a transparent PNG. Runs in your browser — nothing is uploaded.">
+  <meta name="theme-color" content="#0B0B12">
+  <link rel="icon" href="favicon.ico" sizes="32x32"><link rel="apple-touch-icon" href="assets/img/icon-180.png"><link rel="manifest" href="site.webmanifest">
+  <meta property="og:title" content="Smart Halftone & Background Remover — Trendli9 Prints"><meta property="og:image" content="assets/img/og-image.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261015e">
+  <link rel="stylesheet" href="assets/css/halftone.css?v=20261015e">
+</head>
+<body>
+  <div id="site-header"></div>
+  <main id="main">
+    <section class="ht-hero">
+      <div class="container">
+        <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span aria-hidden="true">/</span><span aria-current="page">Smart Halftone</span></nav>
+        <span class="eyebrow">Free DTF tool</span>
+        <h1>Smart halftone,<br><span class="grad-text">print-ready in seconds.</span></h1>
+        <p class="lead">Upload your artwork and the tool checks the border pixels to tell whether the background is black or white, removes it, then turns soft, semi-transparent edges and gradients into a clean dot halftone — so your DTF print stays breathable and soft. Download a transparent PNG. Everything is processed in your browser; nothing is uploaded.</p>
+      </div>
+    </section>
+
+    <section class="section section--tint ht-section">
+      <div class="container ht-tool">
+        <!-- Controls -->
+        <div class="ht-controls">
+          <div class="panel">
+            <h2><span class="n">1</span> Upload artwork</h2>
+            <label class="drop" id="htDrop" for="htFile" tabindex="0" role="button" aria-describedby="htFileName"><i data-icon="upload"></i><b>Drop artwork or choose a file</b><small>PNG, JPG or WEBP · stays on your device</small></label>
+            <input type="file" id="htFile" accept="image/png,image/jpeg,image/webp" class="sr-only">
+            <p class="ht-filename muted" id="htFileName">No file selected</p>
+          </div>
+
+          <div class="panel">
+            <h2><span class="n">2</span> Background</h2>
+            <div class="seg-ctrl ht-seg ht-seg--modes" id="htMode" role="group" aria-label="Background mode">
+              <button type="button" data-mode="auto" aria-pressed="true">Auto</button>
+              <button type="button" data-mode="black" aria-pressed="false">Remove black <small>dark shirts</small></button>
+              <button type="button" data-mode="white" aria-pressed="false">Remove white <small>light shirts</small></button>
+              <button type="button" data-mode="none" aria-pressed="false">Halftone only</button>
+            </div>
+            <p class="ht-auto muted" id="htAutoNote" aria-live="polite"></p>
+          </div>
+
+          <div class="panel">
+            <h2><span class="n">3</span> Fine-tune</h2>
+            <div class="ht-slider">
+              <label for="ht-tol">Background tolerance</label><output id="ht-tol-out" for="ht-tol"></output>
+              <input class="range" type="range" id="ht-tol" min="0" max="60" step="1" aria-describedby="ht-tol-help">
+              <small id="ht-tol-help">How close to pure black/white gets removed.</small>
+            </div>
+            <div class="ht-slider">
+              <label for="ht-soft">Edge softness</label><output id="ht-soft-out" for="ht-soft"></output>
+              <input class="range" type="range" id="ht-soft" min="1" max="60" step="1" aria-describedby="ht-soft-help">
+              <small id="ht-soft-help">Width of the fade between removed and kept colours.</small>
+            </div>
+            <div class="ht-slider">
+              <label for="ht-cell">Dot size</label><output id="ht-cell-out" for="ht-cell"></output>
+              <input class="range" type="range" id="ht-cell" min="3" max="24" step="1" aria-describedby="ht-cell-help">
+              <small id="ht-cell-help">Halftone cell size at preview scale (scaled up for the full-size export).</small>
+            </div>
+            <div class="ht-slider">
+              <label for="ht-range">Halftone range</label><output id="ht-range-out" for="ht-range"></output>
+              <input class="range" type="range" id="ht-range" min="10" max="100" step="1" aria-describedby="ht-range-help">
+              <small id="ht-range-help">Pixels less opaque than this become dots; the rest stays solid.</small>
+            </div>
+            <div class="ht-slider">
+              <label for="ht-angle">Screen angle</label><output id="ht-angle-out" for="ht-angle"></output>
+              <input class="range" type="range" id="ht-angle" min="0" max="90" step="0.5">
+            </div>
+            <div class="ht-slider">
+              <label for="ht-choke">Choke</label><output id="ht-choke-out" for="ht-choke"></output>
+              <input class="range" type="range" id="ht-choke" min="0" max="3" step="1" aria-describedby="ht-choke-help">
+              <small id="ht-choke-help">Shrinks edges slightly to avoid light or dark fringes.</small>
+            </div>
+            <button class="btn btn--sm btn--ghost" type="button" id="htReset"><i data-icon="rotate"></i> Reset</button>
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="ht-preview">
+          <div class="ht-toolbar">
+            <div class="seg-ctrl ht-seg" id="htShirt" role="group" aria-label="Preview shirt colour">
+              <button type="button" data-shirt="black" aria-pressed="true">Black</button>
+              <button type="button" data-shirt="white" aria-pressed="false">White</button>
+              <button type="button" data-shirt="heather" aria-pressed="false">Heather</button>
+              <button type="button" data-shirt="checker" aria-pressed="false">Checker</button>
+            </div>
+            <div class="seg-ctrl ht-seg" id="htZoom" role="group" aria-label="Zoom">
+              <button type="button" data-zoom="fit" aria-pressed="true">Fit</button>
+              <button type="button" data-zoom="100" aria-pressed="false">100%</button>
+            </div>
+          </div>
+          <div class="ht-stage" id="htStage" data-shirt="black" data-zoom="fit">
+            <div class="ht-empty" id="htEmpty"><i data-icon="image"></i><p>Your preview appears here.<br><span>Upload artwork to start.</span></p></div>
+            <canvas id="htCanvas" hidden role="img" aria-label="Processed artwork preview"></canvas>
+            <span class="ht-spinner" aria-hidden="true"></span>
+          </div>
+          <p class="ht-status" id="htStatus" role="status" aria-live="polite">Waiting for artwork.</p>
+          <div class="ht-actions">
+            <button class="btn btn--ghost" type="button" id="htCompare" aria-pressed="false" disabled title="Press and hold (or hold Space) to see the original"><i data-icon="flip"></i> Hold to compare</button>
+            <button class="btn btn--accent" type="button" id="htDownload" disabled><i data-icon="download"></i> Download PNG</button>
+            <button class="btn" type="button" id="htSend" disabled><i data-icon="layers"></i> Send to Gang Sheet</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section ht-why">
+      <div class="container">
+        <span class="eyebrow">The why</span>
+        <h2>Why halftone for <span class="grad-text">DTF?</span></h2>
+        <ol class="ht-points">
+          <li><h3>Breathable, soft hand-feel</h3><p>Dots instead of a solid sheet of ink and adhesive mean less film on the garment — it flexes, breathes and feels lighter to wear.</p></li>
+          <li><h3>No hard box edges</h3><p>Glows, shadows and faded edges can't print as "half-transparent" in DTF. Dots recreate the fade, so you don't get a visible rectangle around the design.</p></li>
+          <li><h3>Cleaner on dark shirts</h3><p>Removing the black background and letting the shirt show through the dots keeps dark designs crisp, without a muddy grey patch.</p></li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="section section--tint ht-next">
+      <div class="container">
+        <div class="card ht-next__card">
+          <div>
+            <span class="eyebrow">Next step</span>
+            <h2>Halftone ready? <span class="grad-text">Send it to the press.</span></h2>
+            <p class="muted">Drop it onto a gang sheet to save on transfers, or place it on a tee in the Design Studio. Questions about sizing or colours? We're on WhatsApp.</p>
+          </div>
+          <div class="ht-next__actions">
+            <a class="btn btn--accent" href="gang-sheet.html"><i data-icon="layers"></i> Build a gang sheet</a>
+            <a class="btn btn--ghost" href="studio.html"><i data-icon="shirt"></i> Open Design Studio</a>
+            <a class="btn btn--wa" href="#" data-wa="Hi Trendli9! I made a halftone with your free tool and have a question about printing it:"><i data-icon="whatsapp"></i> Ask us on WhatsApp</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="site-footer"></div>
+  <script src="assets/js/config.js?v=20261015e"></script>
+  <script src="assets/js/catalog.js?v=20261015e"></script>
+  <script src="assets/js/icons.js?v=20261015e"></script>
+  <script src="assets/js/mockups.js?v=20261015e"></script>
+  <script src="assets/js/app.js?v=20261015e"></script>
+  <script src="assets/js/halftone.js?v=20261015e"></script>
+</body>
+</html>

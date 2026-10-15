@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contact Trendli9 Prints — Visakhapatnam DTF & Apparel Printing</title>
+  <meta name="description" content="Contact Trendli9 Prints at LG Towers, Dabagardens, Visakhapatnam. Call or WhatsApp +91 99326 27413 or email Trendli9prints@gmail.com for quotes and bulk orders.">
+  <meta name="theme-color" content="#0B0B12">
+  <link rel="icon" href="favicon.ico" sizes="32x32"><link rel="apple-touch-icon" href="assets/img/icon-180.png"><link rel="manifest" href="site.webmanifest">
+  <meta property="og:title" content="Contact — Trendli9 Prints"><meta property="og:image" content="assets/img/og-image.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261015e">
+</head>
+<body>
+  <div id="site-header"></div>
+  <main id="main">
+    <section class="page-hero">
+      <span class="blob blob--c" style="opacity:.35"></span>
+      <div class="container">
+        <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span aria-hidden="true">/</span><span aria-current="page">Contact</span></nav>
+        <h1>Let's print <span class="grad-text">something great</span></h1>
+        <p>Fill in the enquiry form — it opens WhatsApp with your details ready to send to our team, so you get a reply on the chat you already use.</p>
+      </div>
+    </section>
+
+    <section class="section section--tint" style="padding-top:48px">
+      <div class="container contact-grid">
+        <form class="card" id="enquiry" novalidate aria-labelledby="enqTitle">
+          <h2 id="enqTitle" style="font-size:1.5rem">Send an enquiry</h2>
+          <p class="muted" style="margin-top:-4px">Fields marked <span class="req" style="color:var(--magenta)">*</span> are required.</p>
+          <div class="form-grid">
+            <div class="field"><label for="eName">Full name <span class="req">*</span></label><input class="input" id="eName" name="name" autocomplete="name" required><span class="err">Please enter your name</span></div>
+            <div class="field"><label for="ePhone">WhatsApp / phone <span class="req">*</span></label><input class="input" id="ePhone" name="phone" type="tel" inputmode="tel" autocomplete="tel" required><span class="err">Enter a valid 10-digit number</span></div>
+            <div class="field"><label for="eEmail">Email</label><input class="input" id="eEmail" name="email" type="email" autocomplete="email"><span class="err">Enter a valid email</span></div>
+            <div class="field"><label for="eCompany">Business / brand</label><input class="input" id="eCompany" name="company" autocomplete="organization"></div>
+            <div class="field"><label for="eService">Service <span class="req">*</span></label><select id="eService" name="service" required><option value="">Select a service</option></select><span class="err">Please choose a service</span></div>
+            <div class="field"><label for="eQty">Approx. quantity</label><select id="eQty" name="qty"><option>1–9 pieces</option><option>10–24 pieces</option><option>25–49 pieces</option><option>50–99 pieces</option><option>100–499 pieces</option><option>500+ pieces</option><option>Not sure yet</option></select></div>
+            <div class="field full"><label for="eMsg">Requirement <span class="req">*</span></label><textarea class="textarea" id="eMsg" name="message" required placeholder="Fabric, design idea, colours, sizes, deadline…"></textarea><span class="err">Tell us a little about what you need</span><span class="help">You can attach artwork files directly in WhatsApp after sending.</span></div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn--wa" type="submit"><i data-icon="whatsapp"></i> Send enquiry on WhatsApp</button>
+            <button class="btn btn--ghost" type="button" id="byEmail"><i data-icon="mail"></i> Send by email instead</button>
+          </div>
+          <p class="note" style="margin:14px 0 0">WhatsApp opens with your enquiry pre-filled to <b class="ph-disp"></b>. Tap <b>Send</b> to deliver it to our team.</p>
+        </form>
+
+        <div>
+          <div class="info-list">
+            <a class="info-item" id="iWa" href="#" target="_blank" rel="noopener"><span class="ic" style="background:var(--wa)"><i data-icon="whatsapp"></i></span><span><b>WhatsApp</b><span class="ph-disp"></span></span></a>
+            <a class="info-item" id="iTel" href="#"><span class="ic" style="background:var(--blue)"><i data-icon="phone"></i></span><span><b>Call us</b><span class="ph-disp"></span></span></a>
+            <a class="info-item" id="iMail" href="#"><span class="ic" style="background:var(--magenta)"><i data-icon="mail"></i></span><span><b>Email</b><span id="mailDisp"></span></span></a>
+            <a class="info-item ig-link" href="#" target="_blank" rel="noopener"><span class="ic" style="background:linear-gradient(135deg,#F58529,#DD2A7B,#8134AF)"><i data-icon="instagram"></i></span><span><b>Instagram</b><span>@<span class="ig-handle"></span></span></span></a>
+            <a class="info-item" id="iMap" href="#" target="_blank" rel="noopener"><span class="ic" style="background:var(--orange)"><i data-icon="pin"></i></span><span><b>Studio</b><span id="addrDisp"></span></span></a>
+            <div class="info-item"><span class="ic" style="background:var(--violet)"><i data-icon="clock"></i></span><span><b>Hours</b><span id="hoursDisp"></span></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="container" style="margin-top:28px">
+        <iframe class="map" id="map" title="Map showing Trendli9 Prints location in Dabagardens, Visakhapatnam" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
+    </section>
+  </main>
+  <div id="site-footer"></div>
+  <script src="assets/js/config.js?v=20261015e"></script>
+  <script src="assets/js/catalog.js?v=20261015e"></script>
+  <script src="assets/js/icons.js?v=20261015e"></script>
+  <script src="assets/js/mockups.js?v=20261015e"></script>
+  <script src="assets/js/app.js?v=20261015e"></script>
+  <script>
+  (function () {
+    const { $, $$, waLink, openWA, validate, toast, store } = window.T9, C = window.T9_CONFIG, CAT = window.T9_CATALOG, a = C.address;
+    $$(".ph-disp").forEach(e => e.textContent = C.phoneDisplay);
+    $("#iWa").href = waLink("Hi Trendli9!"); $("#iTel").href = "tel:" + C.phoneTel;
+    $("#iMail").href = "mailto:" + C.email; $("#mailDisp").textContent = C.email;
+    $("#addrDisp").textContent = `${a.line1}, ${a.line2}, ${a.city}, ${a.state}`;
+    $("#hoursDisp").textContent = C.hours;
+    $("#iMap").href = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(a.mapsQuery);
+    $("#map").src = "https://maps.google.com/maps?q=" + encodeURIComponent(a.mapsQuery) + "&z=16&output=embed";
+
+    const sel = $("#eService");
+    CAT.SERVICES.forEach(s => sel.insertAdjacentHTML("beforeend", `<option>${s.name}</option>`));
+    sel.insertAdjacentHTML("beforeend", "<option>Clothing brand / reseller job work</option><option>Something else</option>");
+    const pre = new URLSearchParams(location.search).get("service"); if (pre) sel.value = pre;
+
+    const form = $("#enquiry");
+    const saved = store.get("t9_customer", {}); if (saved.name) form.elements.name.value = saved.name; if (saved.phone) form.elements.phone.value = saved.phone;
+    form.addEventListener("input", e => e.target.closest(".field")?.classList.remove("has-error"));
+    const compose = d => [`*NEW WEBSITE ENQUIRY*`, ``, `*Name:* ${d.name}`, `*Phone:* ${d.phone}`, d.email ? `*Email:* ${d.email}` : null, d.company ? `*Business:* ${d.company}` : null,
+      `*Service:* ${d.service}`, `*Quantity:* ${d.qty}`, ``, `*Requirement:*`, d.message].filter(x => x !== null).join("\n");
+    const check = () => {
+      let ok = validate(form);
+      const em = form.elements.email; if (em.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em.value)) { em.closest(".field").classList.add("has-error"); if (ok) em.focus(); ok = false; }
+      return ok;
+    };
+    form.addEventListener("submit", e => {
+      e.preventDefault(); if (!check()) return;
+      const d = Object.fromEntries(new FormData(form));
+      store.set("t9_customer", { ...store.get("t9_customer", {}), name: d.name, phone: d.phone });
+      openWA(compose(d)); toast("WhatsApp opened — tap Send to deliver your enquiry"); form.reset();
+    });
+    $("#byEmail").addEventListener("click", () => {
+      if (!check()) return;
+      const d = Object.fromEntries(new FormData(form));
+      location.href = `mailto:${C.email}?subject=${encodeURIComponent("Website enquiry: " + d.service)}&body=${encodeURIComponent(compose(d).replace(/\*/g, ""))}`;
+    });
+  })();
+  </script>
+</body>
+</html>

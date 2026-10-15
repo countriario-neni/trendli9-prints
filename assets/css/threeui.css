@@ -1,0 +1,53 @@
+/* ThreeUI liquid-metal button — styles for assets/js/threeui/liquid-metal.js
+   Ported from ThreeUI Community (github.com/MengTo/threeui), MIT License,
+   Copyright (c) 2026 Meng To.
+   Only applies once the script has upgraded a button (.lm-ready), so without
+   WebGL2 the button keeps its normal .btn style. */
+
+[data-liquid-metal].lm-ready {
+  --lm-plate: var(--ink, #0B0B12);
+  --bg-btn: var(--lm-plate);
+  --fg-btn: #fff;
+  position: relative;
+  isolation: isolate;               /* keeps the z-index:-1 canvas inside the button */
+  background: var(--lm-plate);
+  color: #fff;
+  border-color: transparent;
+  animation: none;                  /* e.g. .btn--grad's gradient shift */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .65);   /* label scrim over the bright metal */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  /* the plate's drop shadow, as in the original */
+  box-shadow:
+    0 4px 10px rgba(11, 11, 18, .30),
+    0 12px 26px rgba(11, 11, 18, .22);
+}
+/* deepen it while the metal is lit, so the bright face keeps its edge */
+[data-liquid-metal].lm-ready.lm-hot {
+  box-shadow:
+    0 6px 14px rgba(11, 11, 18, .38),
+    0 18px 38px rgba(11, 11, 18, .30);
+}
+/* pressed: the button settles onto the surface, so the shadow tightens */
+[data-liquid-metal].lm-ready.lm-press {
+  box-shadow:
+    0 2px 6px rgba(11, 11, 18, .40),
+    0 6px 16px rgba(11, 11, 18, .28);
+  transition-duration: .1s;
+}
+[data-liquid-metal].lm-ready:focus-visible {
+  outline: 3px solid var(--cyan, #00A8F0);
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
+/* WhatsApp buttons keep a hint of their green on the plate */
+.btn--wa[data-liquid-metal].lm-ready { --lm-plate: #06301A; }
+
+.lm-canvas {
+  position: absolute;
+  z-index: -1;                      /* above the plate, below the label */
+  pointer-events: none;
+  display: block;
+  max-width: none;
+}

@@ -1,0 +1,57 @@
+/* TRENDLI9 — Smart Halftone tool */
+.ht-hero { padding: clamp(40px, 6vw, 80px) 0 clamp(28px, 4vw, 48px); }
+.ht-hero h1 { font-size: clamp(2.2rem, 5.4vw, 4.2rem); max-width: 900px; }
+.ht-hero .lead { max-width: 760px; }
+.ht-section { padding-top: 40px; }
+
+.ht-tool { display: grid; grid-template-columns: 360px 1fr; gap: 20px; align-items: start; }
+@media (max-width: 960px) { .ht-tool { grid-template-columns: 1fr; } }
+.ht-controls .panel + .panel { margin-top: 14px; }
+.ht-filename { font-size: .86rem; margin: 10px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ht-seg { flex-wrap: wrap; border-radius: 14px; }
+.ht-seg button { border-radius: 10px; }
+.ht-seg--modes { display: grid; grid-template-columns: 1fr 1fr; width: 100%; gap: 3px; }
+.ht-seg--modes button { line-height: 1.2; padding: 8px 10px; }
+.ht-seg--modes button small { display: block; font-weight: 600; font-size: .7rem; opacity: .7; }
+.ht-auto { font-size: .84rem; margin: 10px 0 0; min-height: 1.2em; }
+
+.ht-slider { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 10px; margin-bottom: 14px; }
+.ht-slider label { font-weight: 700; font-size: .9rem; }
+.ht-slider output { font-variant-numeric: tabular-nums; font-weight: 700; font-size: .85rem; color: var(--muted); }
+.ht-slider .range { grid-column: 1 / -1; }
+.ht-slider small { grid-column: 1 / -1; color: var(--muted); font-size: .78rem; line-height: 1.35; }
+
+.ht-preview { position: sticky; top: calc(var(--header-h) + 16px); background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 16px; }
+@media (max-width: 960px) { .ht-preview { position: static; } }
+.ht-toolbar { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.ht-stage { position: relative; border-radius: var(--r); overflow: auto; min-height: 420px; max-height: 72vh; display: grid; place-items: center; background: #111; transition: background .25s; }
+.ht-stage[data-shirt="black"] { background: #111214; }
+.ht-stage[data-shirt="white"] { background: #f7f7f5; }
+.ht-stage[data-shirt="heather"] { background: #9a9ca1 radial-gradient(rgba(255,255,255,.08) 1px, transparent 1px) 0 0 / 4px 4px; }
+.ht-stage[data-shirt="checker"] { background: repeating-conic-gradient(#e6e7ea 0 25%, #fff 0 50%) 0 0 / 22px 22px; }
+.ht-stage canvas { display: block; }
+.ht-stage[data-zoom="fit"] canvas { max-width: 100%; max-height: 70vh; width: auto; height: auto; }
+.ht-stage[data-zoom="100"] { place-items: start; }
+.ht-empty { text-align: center; color: #b9bcc6; padding: 40px 20px; }
+.ht-stage[data-shirt="white"] .ht-empty, .ht-stage[data-shirt="checker"] .ht-empty { color: var(--muted); }
+.ht-empty svg { width: 42px; height: 42px; margin: 0 auto 10px; opacity: .8; }
+.ht-empty p { margin: 0; font-weight: 700; }
+.ht-empty span { font-weight: 500; opacity: .8; }
+.ht-spinner { position: absolute; top: 14px; right: 14px; width: 22px; height: 22px; border-radius: 50%; border: 3px solid rgba(255,255,255,.25); border-top-color: var(--accent); opacity: 0; transition: opacity .2s; animation: spin .8s linear infinite; pointer-events: none; }
+.ht-stage.is-busy .ht-spinner { opacity: 1; }
+.ht-status { font-size: .86rem; color: var(--muted); margin: 10px 0; min-height: 1.3em; }
+.ht-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.ht-actions .btn { flex: 1 1 auto; }
+#htCompare[aria-pressed="true"] { --bg-btn: var(--ink); --fg-btn: #fff; }
+
+.ht-points { list-style: none; padding: 0; margin: 28px 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; counter-reset: htp; }
+.ht-points li { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 22px; counter-increment: htp; }
+.ht-points li:nth-child(1) { border-top: 4px solid #00A8F0; } .ht-points li:nth-child(2) { border-top: 4px solid #E5007E; } .ht-points li:nth-child(3) { border-top: 4px solid #FFC400; }
+.ht-points h3 { font-size: 1.15rem; }
+.ht-points p { color: var(--muted); margin: 0; font-size: .95rem; }
+@media (max-width: 860px) { .ht-points { grid-template-columns: 1fr; } }
+
+.ht-next__card { display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; align-items: center; }
+.ht-next__actions { display: grid; gap: 8px; }
+@media (max-width: 860px) { .ht-next__card { grid-template-columns: 1fr; } }

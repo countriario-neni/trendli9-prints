@@ -1,0 +1,13 @@
+{
+  "name": "Trendli9 Prints",
+  "short_name": "Trendli9",
+  "description": "DTF transfer printing & custom apparel — Visakhapatnam",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0B0B12",
+  "theme_color": "#0B0B12",
+  "icons": [
+    { "src": "assets/img/icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "assets/img/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

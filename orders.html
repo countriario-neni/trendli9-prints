@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Orders — Trendli9 Prints</title>
+  <meta name="description" content="View the orders you've placed with Trendli9 Prints from this device and continue them on WhatsApp.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0B0B12">
+  <link rel="icon" href="favicon.ico" sizes="32x32"><link rel="apple-touch-icon" href="assets/img/icon-180.png"><link rel="manifest" href="site.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261015e">
+</head>
+<body>
+  <div id="site-header"></div>
+  <main id="main">
+    <section class="page-hero" style="padding-bottom:40px">
+      <div class="container">
+        <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span aria-hidden="true">/</span><span aria-current="page">My Orders</span></nav>
+        <h1>My <span class="grad-text">orders</span></h1>
+        <p>Orders placed from this device. Live updates on price, artwork approval, printing and dispatch come from our team in your WhatsApp chat.</p>
+      </div>
+    </section>
+    <section class="section section--tint" style="padding-top:40px">
+      <div class="container" style="max-width:900px">
+        <div id="newBanner" hidden class="card" style="border-color:var(--wa);margin-bottom:20px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+          <span class="ic" style="width:48px;height:48px;border-radius:50%;background:var(--wa);display:grid;place-items:center;color:#062E16"><i data-icon="check"></i></span>
+          <div style="flex:1;min-width:220px"><b>Order created!</b><br><span class="muted">Did WhatsApp open? Make sure you tapped <b>Send</b>. If not, use the button to open it again.</span></div>
+          <button class="btn btn--wa btn--sm" type="button" id="resendNew"><i data-icon="whatsapp"></i> Open WhatsApp</button>
+        </div>
+        <div id="list"></div>
+      </div>
+    </section>
+  </main>
+  <div id="site-footer"></div>
+  <script src="assets/js/config.js?v=20261015e"></script>
+  <script src="assets/js/catalog.js?v=20261015e"></script>
+  <script src="assets/js/icons.js?v=20261015e"></script>
+  <script src="assets/js/mockups.js?v=20261015e"></script>
+  <script src="assets/js/app.js?v=20261015e"></script>
+  <script>
+  (function () {
+    const { $, esc, money, orders, openWA, cart, toast } = window.T9, I = window.T9_ICON, MK = window.T9_MOCKUPS;
+    const newId = new URLSearchParams(location.search).get("new");
+    function render() {
+      const all = orders.all();
+      if (!all.length) { $("#list").innerHTML = `<div class="card empty">${I("receipt")}<p style="margin-top:12px"><b>No orders yet on this device.</b><br>Orders you check out appear here with their order ID.</p><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><a class="btn" href="shop.html">Shop products</a><a class="btn btn--ghost" href="studio.html">Design your own</a></div></div>`; return; }
+      $("#list").innerHTML = all.map(o => `
+        <article class="order-card" id="${esc(o.id)}">
+          <div class="order-card__head">
+            <div><div class="order-id">${esc(o.id)}</div><div class="muted" style="font-size:.9rem">${new Date(o.date).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })} · ${esc(o.customer.delivery)}</div></div>
+            <span class="status">Awaiting confirmation</span>
+          </div>
+          <div class="timeline" aria-label="Order progress">
+            <div class="done">Order placed</div><div>Quote confirmed</div><div>Printing</div><div>Ready / shipped</div>
+          </div>
+          <div>${o.items.map((i, n) => `
+            <div class="cart-line" style="grid-template-columns:56px 1fr auto">
+              <div class="cart-line__img" style="width:56px;height:56px">${window.T9.safeThumb(o.thumbs?.[n]) ? `<img src="${o.thumbs[n]}" alt="">` : i.mockup ? MK.svg(i.mockup, { color: i.colorHex }) : i.img ? `<img src="assets/img/${i.img}.webp" alt="">` : I("package")}</div>
+              <div><h4>${esc(i.name)}</h4><div class="meta">${[i.color, i.variant, i.sizes && Object.keys(i.sizes).length ? Object.entries(i.sizes).map(([s, q]) => `${s}×${q}`).join(", ") : null, `${i.qty} ${i.unit || "pcs"}`].filter(Boolean).map(esc).join(" · ")}</div></div>
+              <b>${i.total != null ? money(i.total) : "Quote"}</b>
+            </div>`).join("")}</div>
+          <div class="total-row"><span>Estimated total</span><span>${money(o.total)}${o.hasQuote ? " +" : ""}</span></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn--wa btn--sm" type="button" data-status="${esc(o.id)}">${I("whatsapp")} Ask for status</button>
+            <button class="btn btn--ghost btn--sm" type="button" data-resend="${esc(o.id)}">${I("send")} Resend order</button>
+            <button class="btn btn--ghost btn--sm" type="button" data-reorder="${esc(o.id)}">${I("rotate")} Reorder</button>
+            <button class="btn btn--sm" type="button" data-del="${esc(o.id)}" style="--bg-btn:transparent;--fg-btn:var(--muted)">${I("trash")} Remove</button>
+          </div>
+        </article>`).join("");
+    }
+    document.addEventListener("click", e => {
+      const b = e.target.closest("[data-status],[data-resend],[data-reorder],[data-del]"); if (!b) return;
+      const o = orders.all().find(x => x.id === (b.dataset.status || b.dataset.resend || b.dataset.reorder || b.dataset.del)); if (!o) return;
+      if (b.dataset.status) openWA(`Hi Trendli9! Could you share the status of my order *${o.id}*? (${o.customer.name})`);
+      if (b.dataset.resend) openWA(o.message);
+      if (b.dataset.reorder) { o.items.forEach(i => cart.add({ ...i, key: null })); document.getElementById("cartBtn").click(); }
+      if (b.dataset.del) { orders.remove(o.id); render(); toast("Order removed from this device"); }
+    });
+    render();
+    if (newId) {
+      const o = orders.all().find(x => x.id === newId);
+      if (o) { $("#newBanner").hidden = false; $("#resendNew").addEventListener("click", () => openWA(o.message)); document.getElementById(newId)?.style.setProperty("border-color", "var(--wa)"); }
+    }
+  })();
+  </script>
+</body>
+</html>

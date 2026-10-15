@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /orders.html
+Sitemap: https://trendli9prints.com/sitemap.xml
