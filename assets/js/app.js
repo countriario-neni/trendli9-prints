@@ -555,7 +555,8 @@
      For browsers that can't share files: the order image and files are uploaded
      and WhatsApp opens with the order text plus a link to them. WhatsApp shows
      the link's preview (the order image) inside the same message. */
-  const UPLOAD_MAX_FILES = 29, UPLOAD_MAX_BYTES = 90 * 1024 * 1024;
+  // the free order store keeps files up to 10 MB each; bigger print sheets stay on the device
+  const UPLOAD_MAX_FILES = 29, UPLOAD_MAX_BYTES = 60 * 1024 * 1024, UPLOAD_MAX_EACH = 10 * 1024 * 1024;
   async function previewJPEG(card) { // small image for link previews
     const bm = await createImageBitmap(card), w = Math.min(1200, bm.width), h = Math.round(bm.height * w / bm.width);
     const c = document.createElement("canvas"); c.width = w; c.height = h;
@@ -570,7 +571,7 @@
     try { const p = await previewJPEG(files[0]); fd.append("preview", p, p.name); } catch { }
     let total = files[0].size, n = 0;
     for (const f of files.slice(1)) {
-      if (n >= UPLOAD_MAX_FILES || total + f.size > UPLOAD_MAX_BYTES) continue;
+      if (n >= UPLOAD_MAX_FILES || f.size > UPLOAD_MAX_EACH || total + f.size > UPLOAD_MAX_BYTES) continue;
       fd.append("files", f, f.name); total += f.size; n++;
     }
     return new Promise((resolve, reject) => {

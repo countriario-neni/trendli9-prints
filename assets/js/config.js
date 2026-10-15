@@ -28,9 +28,9 @@ window.T9_CONFIG = {
   hours: "Mon – Sat · 10:00 AM – 8:00 PM",
   currency: "₹",
   dtfPricePerMeter: 250,
-  // Order upload service (site/worker, Cloudflare Worker + R2). When set, browsers that can't
+  // Order upload service (site/worker: Cloudflare Worker + Workers KV). When set, browsers that can't
   // share files send the order text with a link whose preview shows the order image.
-  orderApi: "",
+  orderApi: "https://trendli9-orders.trendli9-orders.workers.dev",
   // TODO(client): confirm typical turnaround wording
   turnaround: "Most DTF transfer orders are ready within 24–48 hours. Apparel and bulk timelines depend on quantity and are confirmed on WhatsApp."
 };

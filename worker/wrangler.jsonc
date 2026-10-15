@@ -1,12 +1,13 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  // Stores gang sheet / design orders (order image + files) and serves an order page,
+  // Stores gang sheet / design orders (order image + files, in KV) and serves an order page,
   // so the WhatsApp message can carry the order text plus a link that previews the image.
   "name": "trendli9-orders",
   "main": "src/index.js",
   "compatibility_date": "2026-10-01",
-  "r2_buckets": [
-    { "binding": "ORDERS", "bucket_name": "trendli9-orders" }
+  // Workers KV (free, no card): entries expire on their own after 60 days
+  "kv_namespaces": [
+    { "binding": "ORDERS", "id": "0136c696a0144cea8afc96b3e7249a89" }
   ],
   // max 10 uploads per minute from one IP address
   "ratelimits": [

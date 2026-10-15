@@ -1,4 +1,4 @@
-/* Trendli9 Prints — order uploads (Cloudflare Worker + R2)
+/* Trendli9 Prints — order uploads (Cloudflare Worker + Workers KV)
 
    POST /orders        multipart form from the website: text, card (PNG order image),
                        preview (small JPEG for link previews), files[] (print files, originals)
@@ -9,9 +9,11 @@
    GET  /o/:id/:name   one stored file
 
    Order ids are random and unguessable; pages are not indexed. Only the website's
-   origins may upload, uploads are size- and rate-limited. */
+   origins may upload, uploads are size- and rate-limited. Everything expires after
+   60 days; files over KV's 25 MB value limit are listed but not stored. */
 
 const MAX_FILES = 30, MAX_TOTAL = 95 * 1024 * 1024, MAX_TEXT = 8000;
+const MAX_VALUE = 25 * 1024 * 1024 - 1024, TTL = 60 * 24 * 3600; // KV value limit · keep orders 60 days
 const IMAGE = /^image\/(png|jpeg|webp|svg\+xml)$/;
 const INLINE = /^image\/(png|jpeg|webp)$/; // SVG is only ever served as a download
 
@@ -59,18 +61,22 @@ async function createOrder(req, env, url, cors, okOrigin) {
   if (all.reduce((s, f) => s + f.size, 0) > MAX_TOTAL) return json({ error: "files too large" }, 413, cors);
 
   const id = crypto.randomUUID().replace(/-/g, "");
-  const base = `orders/${id}/`, put = (name, f) => env.ORDERS.put(base + name, f.stream(), { httpMetadata: { contentType: f.type } });
-  const used = new Set(), stored = [];
+  const base = `orders/${id}/`;
+  const put = async (name, f) => env.ORDERS.put(base + name, await f.arrayBuffer(), { expirationTtl: TTL, metadata: { type: f.type } });
+  if (card.size > MAX_VALUE) return json({ error: "order image too large" }, 413, cors);
+  const used = new Set(), stored = [], skipped = [];
   await put("card.png", card);
-  if (isFile(preview) && preview.type === "image/jpeg") await put("preview.jpg", preview);
+  const hasPreview = isFile(preview) && preview.type === "image/jpeg" && preview.size <= MAX_VALUE;
+  if (hasPreview) await put("preview.jpg", preview);
   for (const f of files) {
+    if (f.size > MAX_VALUE) { skipped.push({ label: f.name, size: f.size }); continue; }
     let name = "f-" + safeName(f.name), k = 1;
     while (used.has(name)) name = "f-" + safeName(f.name).replace(/(\.[^.]+)?$/, `-${++k}$1`);
     used.add(name);
     await put(name, f);
     stored.push({ name, label: f.name, size: f.size, type: f.type });
   }
-  await env.ORDERS.put(base + "meta.json", JSON.stringify({ text, created: new Date().toISOString(), preview: isFile(preview), files: stored }), { httpMetadata: { contentType: "application/json" } });
+  await env.ORDERS.put(base + "meta.json", JSON.stringify({ text, created: new Date().toISOString(), preview: hasPreview, files: stored, skipped }), { expirationTtl: TTL });
   return json({ id, url: `${url.origin}/o/${id}` }, 201, cors);
 }
 
@@ -78,11 +84,11 @@ const SECURITY = { "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-r
 
 async function serveFile(env, id, name, url) {
   if (!/^(card\.png|preview\.jpg|f-[\w.-]+)$/.test(name)) return new Response("Not found", { status: 404 });
-  const obj = await env.ORDERS.get(`orders/${id}/${name}`);
-  if (!obj) return new Response("Not found", { status: 404 });
-  const type = obj.httpMetadata?.contentType || "application/octet-stream";
+  const { value, metadata } = await env.ORDERS.getWithMetadata(`orders/${id}/${name}`, { type: "stream" });
+  if (!value) return new Response("Not found", { status: 404 });
+  const type = metadata?.type || "application/octet-stream";
   const download = url.searchParams.has("dl") || !INLINE.test(type);
-  return new Response(obj.body, { headers: {
+  return new Response(value, { headers: {
     ...SECURITY, "Content-Type": type, "Cache-Control": "public, max-age=86400",
     "Content-Security-Policy": "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox",
     ...(download ? { "Content-Disposition": `attachment; filename="${name.replace(/^f-/, "")}"` } : {})
@@ -90,9 +96,9 @@ async function serveFile(env, id, name, url) {
 }
 
 async function orderPage(env, url, id) {
-  const obj = await env.ORDERS.get(`orders/${id}/meta.json`);
-  if (!obj) return new Response("Order not found", { status: 404, headers: SECURITY });
-  const meta = await obj.json(), brand = env.BRAND || "Trendli9 Prints";
+  const meta = await env.ORDERS.get(`orders/${id}/meta.json`, { type: "json" });
+  if (!meta) return new Response("Order not found (orders are kept for 60 days)", { status: 404, headers: SECURITY });
+  const brand = env.BRAND || "Trendli9 Prints";
   const lines = meta.text.split("\n"), plain = lines.map(l => l.replace(/\*/g, ""));
   const title = plain[0] || `${brand} order`;
   const desc = plain.slice(1).filter(l => l.trim()).slice(0, 4).join(" · ").slice(0, 280);
@@ -101,7 +107,8 @@ async function orderPage(env, url, id) {
     const bold = /^\s*\*/.test(l), t = esc(l.replace(/\*/g, ""));
     return bold ? `<b>${t}</b>` : t;
   }).join("\n");
-  const files = meta.files.map(f => `<li><a href="/o/${id}/${encodeURIComponent(f.name)}?dl">${esc(f.label)}</a><span>${kb(f.size)}</span></li>`).join("");
+  const files = meta.files.map(f => `<li><a href="/o/${id}/${encodeURIComponent(f.name)}?dl">${esc(f.label)}</a><span>${kb(f.size)}</span></li>`).join("")
+    + (meta.skipped || []).map(f => `<li>${esc(f.label)}<span>${kb(f.size)} · too large to store, ask the customer for it</span></li>`).join("");
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title><meta name="robots" content="noindex, nofollow">
 <meta property="og:type" content="website"><meta property="og:site_name" content="${esc(brand)}">
@@ -118,7 +125,7 @@ li:first-child{border-top:0}a{color:#1F5BFF;font-weight:600;overflow-wrap:anywhe
 </style></head><body><header>${esc(brand.toUpperCase())} · ORDER</header><main>
 <a class="card" href="/o/${id}/card.png"><img src="/o/${id}/card.png" alt="Order image: design preview and order details"></a>
 <div class="box"><h2>Order details</h2><pre>${body}</pre></div>
-${files ? `<div class="box"><h2>Files (${meta.files.length})</h2><ul>${files}</ul></div>` : ""}
+${files ? `<div class="box"><h2>Files (${meta.files.length + (meta.skipped || []).length})</h2><ul>${files}</ul></div>` : ""}
 <p style="color:#5A5F6E;font-size:.9rem">Created ${esc(new Date(meta.created).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }))} IST</p>
 ${env.WHATSAPP ? `<a class="wa" href="https://api.whatsapp.com/send?phone=${esc(env.WHATSAPP)}">Chat with ${esc(brand)} on WhatsApp</a>` : ""}
 </main></body></html>`;
