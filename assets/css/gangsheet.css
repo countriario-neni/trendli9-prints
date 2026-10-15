@@ -113,6 +113,14 @@
 .gs-switch[hidden] { display: none; }
 .gs-switch input { width: 20px; height: 20px; accent-color: var(--accent); margin: 0; flex: none; }
 
+.gs-nest { border: 0; padding: 0; margin: 10px 0 0; min-width: 0; }
+.gs-radio { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: var(--r); cursor: pointer; margin-bottom: 8px; }
+.gs-radio:has(input:checked) { border-color: var(--ink); }
+.gs-radio input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); flex: none; }
+.gs-radio b { display: block; font-size: .9rem; }
+.gs-radio small { display: block; color: var(--muted); font-size: .8rem; }
+.gs-nest .gs-note:empty { display: none; }
+
 /* Summary */
 .gs-summary { margin: 0; display: grid; }
 .gs-summary > div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: .92rem; }

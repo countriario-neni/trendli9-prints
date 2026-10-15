@@ -10,8 +10,8 @@
   <meta property="og:title" content="Gang Sheet Builder — Trendli9 Prints"><meta property="og:image" content="assets/img/og-image.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261016b">
-  <link rel="stylesheet" href="assets/css/gangsheet.css?v=20261016b">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261016c">
+  <link rel="stylesheet" href="assets/css/gangsheet.css?v=20261016c">
 </head>
 <body>
   <div id="site-header"></div>
@@ -95,6 +95,12 @@
               <div class="field gs-margin"><label for="gsMargin">Edge margin (in)</label><input class="input" type="number" id="gsMargin" min="0" max="1" step="0.05" value="0.25" inputmode="decimal"></div>
               <label class="gs-switch"><input type="checkbox" id="gsRotate" checked><span>Allow 90° rotation to save film</span></label>
               <label class="gs-switch" id="gsTogetherWrap"><input type="checkbox" id="gsTogether"><span>Keep each design close together</span></label>
+              <fieldset class="gs-nest" id="gsNest">
+                <legend class="gs-label">Nesting</legend>
+                <label class="gs-radio"><input type="radio" name="nest" value="box" checked><span><b>Box packing — fast</b><small>Packs each design's rectangle.</small></span></label>
+                <label class="gs-radio"><input type="radio" name="nest" value="shape"><span><b>True shape — fits closer</b><small>Packs around the artwork's outline. Used only if it saves a sheet.</small></span></label>
+                <p class="gs-note" id="gsNestNote" aria-live="polite"></p>
+              </fieldset>
             </div>
 
             <div class="panel gs-summary-panel">
@@ -189,11 +195,11 @@
     </section>
   </main>
   <div id="site-footer"></div>
-  <script src="assets/js/config.js?v=20261016b"></script>
-  <script src="assets/js/catalog.js?v=20261016b"></script>
-  <script src="assets/js/icons.js?v=20261016b"></script>
-  <script src="assets/js/mockups.js?v=20261016b"></script>
-  <script src="assets/js/app.js?v=20261016b"></script>
-  <script src="assets/js/gangsheet.js?v=20261016b"></script>
+  <script src="assets/js/config.js?v=20261016c"></script>
+  <script src="assets/js/catalog.js?v=20261016c"></script>
+  <script src="assets/js/icons.js?v=20261016c"></script>
+  <script src="assets/js/mockups.js?v=20261016c"></script>
+  <script src="assets/js/app.js?v=20261016c"></script>
+  <script src="assets/js/gangsheet.js?v=20261016c"></script>
 </body>
 </html>

@@ -32,6 +32,7 @@
     designs: [],          // see addFile()
     margin: 0.25, gap: 0.3, rotate: true, together: false,
     repeatId: null, repeatBy: "copies", repCopies: 10, repSheets: 1,
+    nest: "box",          // "box" (MaxRects) | "shape" (silhouettes, in a worker)
     bg: "checker",
     activeId: null,
     layout: null          // last packing result
@@ -579,6 +580,7 @@
   numIn("#gsGap", "gap", GAP_MAX);
   $("#gsRotate").addEventListener("change", e => { state.rotate = e.target.checked; refreshCards(); schedule(0); });
   $("#gsTogether").addEventListener("change", e => { state.together = e.target.checked; schedule(0); });
+  $("#gsNest").addEventListener("change", e => { if (e.target.name === "nest") { state.nest = e.target.value; schedule(0); } });
   $("#gsBgSeg").addEventListener("click", e => {
     const b = e.target.closest("[data-bg]"); if (!b) return;
     state.bg = b.dataset.bg;
@@ -597,7 +599,7 @@
   function update() {
     clearTimeout(timer);
     const L = state.layout = state.designs.length ? compute() : null;
-    renderSummary(L); draw(); renderOverflow(L); renderSteps(L); refreshCards(); renderRepeatNote(L);
+    renderSummary(L); draw(); renderOverflow(L); renderSteps(L); refreshCards(); renderRepeatNote(L); runNest(L);
     const ok = !!(L && L.prints);
     ["#gsAdd", "#gsWA", "#gsDL", "#gsPrev"].forEach(s => { $(s).disabled = !ok; });
     $("#gsGen").disabled = !state.designs.length;
@@ -962,8 +964,75 @@
     const L = state.layout, pv = $("#gsPreview");
     pv.scrollIntoView({ behavior: T9.reduceMotion ? "auto" : "smooth", block: "start" });
     pv.focus({ preventScroll: true });
-    if (L && L.prints) toast(`Layout ready — ${plural(L.prints, "copy", "copies")} on ${plural(L.sheets.length, "sheet")}`);
+    if (L && L.prints) toast(state.nest === "shape" && L.sheets.length > 1 ? "Layout ready — fitting true shapes…" : `Layout ready — ${plural(L.prints, "copy", "copies")} on ${plural(L.sheets.length, "sheet")}`);
   });
+
+  /* ======================================================
+     True-shape nesting: packs the artwork silhouettes in a worker
+     (assets/js/nest-worker.js) and is used only when it saves a sheet.
+     ====================================================== */
+  const NEST_URL = "assets/js/nest-worker.js?v=20261016c", CELL = 0.1; // grid cell, inches
+  let nestWorker = null, nestBusy = false, nestJob = 0, nestFallback = null;
+  const nestNote = t => { $("#gsNestNote").textContent = t; };
+  // silhouette on the CELL grid: drawn at 4× and max-pooled so thin strokes aren't lost
+  function silhouette(d) {
+    const w = Math.max(1, Math.ceil(d.wIn / CELL - EPS)), h = Math.max(1, Math.ceil(d.hIn / CELL - EPS)), K = 4;
+    const mask = new Uint8Array(w * h);
+    try {
+      const c = document.createElement("canvas"); c.width = w * K; c.height = h * K;
+      const x = c.getContext("2d", { willReadFrequently: true });
+      drawArt(x, d, 0, 0, d.wIn / CELL * K, d.hIn / CELL * K, false);
+      const a = x.getImageData(0, 0, w * K, h * K).data;
+      for (let y = 0; y < h * K; y++) for (let i = 0; i < w * K; i++) if (a[(y * w * K + i) * 4 + 3]) mask[((y / K) | 0) * w + ((i / K) | 0)] = 1;
+    } catch { mask.fill(1); } // unreadable art: treat as its full box
+    return { mask, w, h };
+  }
+  function nestRun(params, job, onProgress) {
+    if (nestBusy && nestWorker) { nestWorker.terminate(); nestWorker = null; } // drop a stale job
+    if (nestWorker === null) { try { nestWorker = new Worker(NEST_URL); } catch { nestWorker = false; } }
+    if (nestWorker) {
+      nestBusy = true;
+      return new Promise((resolve, reject) => {
+        nestWorker.onmessage = e => {
+          if (e.data.id !== job) return;
+          if (e.data.progress != null) { onProgress(e.data.progress); return; }
+          nestBusy = false;
+          e.data.error ? reject(new Error(e.data.error)) : resolve(e.data.result);
+        };
+        nestWorker.onerror = () => { nestBusy = false; nestWorker.terminate(); nestWorker = false; resolve(nestRun(params, job, onProgress)); };
+        nestWorker.postMessage({ id: job, params });
+      });
+    }
+    // fallback: same core on the main thread
+    nestFallback = nestFallback || new Promise((res, rej) => { const s = document.createElement("script"); s.src = NEST_URL; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+    return nestFallback.then(() => new Promise(r => setTimeout(r, 16))).then(() => window.T9Nest.pack(params, onProgress));
+  }
+  function runNest(L) {
+    const job = ++nestJob;
+    if (state.nest !== "shape" || !L || !L.prints) { nestNote(""); return; }
+    if (L.sheets.length < 2) { nestNote("Already on 1 sheet — kept box layout."); return; }
+    const all = L.sheets.flat(), refs = Array.from(new Set(all.map(p => p.ref)));
+    const [UW, UH] = usable();
+    const params = {
+      gw: Math.floor(UW / CELL + EPS), gh: Math.floor(UH / CELL + EPS),
+      r: Math.max(1, Math.ceil(state.gap / CELL - EPS)), rot: state.rotate,
+      designs: refs.map(silhouette), items: all.map(p => refs.indexOf(p.ref))
+    };
+    nestNote("Fitting shapes… 0%");
+    nestRun(params, job, p => { if (job === nestJob) nestNote(`Fitting shapes… ${Math.round(p * 100)}%`); }).then(res => {
+      if (job !== nestJob || state.layout !== L) return;
+      const saved = L.sheets.length - res.sheets.length;
+      if (saved <= 0 || res.sheets.flat().length !== all.length) { nestNote("No saving, kept box layout."); return; }
+      L.eff *= L.sheets.length / res.sheets.length;
+      L.sheets = res.sheets.map(sh => sh.map(q => {
+        const d = refs[q.d];
+        return { x: q.x * CELL, y: q.y * CELL, w: (q.rot ? d.hIn : d.wIn) + L.g, h: (q.rot ? d.wIn : d.hIn) + L.g, rot: q.rot, ref: d };
+      }));
+      L.price = L.sheets.length * PRICE_M; L.shape = true;
+      renderSummary(L); draw(); refreshCards(); renderRepeatNote(L);
+      nestNote(`Saved ${plural(saved, "sheet")} — the true-shape layout uses ${plural(L.sheets.length, "sheet")}.`);
+    }).catch(() => { if (job === nestJob) nestNote("True-shape nesting isn't available on this device — kept box layout."); });
+  }
 
   window.T9_GANG = { packSheets, sheetPNG, state, update }; // exposed for testing
 
