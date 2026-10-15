@@ -260,7 +260,9 @@
     if (needQty()) return;
     const item = buildItem();
     try { item.thumb = await renderPNG(S.layers.front.length || !S.layers.back.length ? "front" : "back", 220, "image/jpeg", .82); } catch { }
-    cart.add(item); S.dirty = false;
+    let files = [];
+    try { files = await orderFiles(); } catch { } // mockups + original artwork travel with the cart order
+    await cart.add(item, files); S.dirty = false;
     $("#cartBtn").click();
   });
   // mockup PNG of each printed side + the original artwork files

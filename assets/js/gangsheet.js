@@ -909,17 +909,23 @@
     try { return c.toDataURL("image/jpeg", 0.8); } catch { return null; }
   }
 
-  $("#gsAdd").addEventListener("click", () => {
-    const L = state.layout; if (!L || !L.prints) return;
-    const n = L.sheets.length;
-    T9.cart.add({
+  // the print files and original designs go into the cart with the sheets, so checkout can send them
+  const addBtn = $("#gsAdd");
+  addBtn.addEventListener("click", async () => {
+    const L = state.layout; if (!L || !L.prints || addBtn.classList.contains("is-busy")) return;
+    const n = L.sheets.length, label = addBtn.lastChild, orig = label.textContent;
+    addBtn.classList.add("is-busy"); addBtn.setAttribute("aria-busy", "true"); label.textContent = " Preparing print files…";
+    let files = [];
+    try { files = await prepareFiles(L); } catch { toast("Couldn't render the print files here — attach your art in WhatsApp after checkout"); }
+    addBtn.classList.remove("is-busy"); addBtn.removeAttribute("aria-busy"); label.textContent = orig;
+    await T9.cart.add({
       productId: "dtf-gang-sheet", name: "DTF Gang Sheet", img: "svc-dtf",
       qty: n, unit: "sheet",
       variant: `${SHEET_W} × ${SHEET_H} in · ${L.prints} prints`,
       total: L.price, hasArtwork: true,
       notes: summaryLines(L).join("; "),
       thumb: thumbDataURL(L)
-    });
+    }, files);
     document.getElementById("cartBtn")?.click();
   });
 

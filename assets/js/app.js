@@ -20,6 +20,28 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } }
   };
 
+  /* ---------- order files (IndexedDB) ----------
+     Print files, mockups and artwork added with a cart item are kept in the
+     browser until checkout, so the cart order can send them to WhatsApp too. */
+  const fileStore = (() => {
+    let dbp = null;
+    const db = () => dbp || (dbp = new Promise((res, rej) => {
+      const r = indexedDB.open("t9_files", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("files");
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }));
+    const run = (mode, fn) => db().then(d => new Promise((res, rej) => {
+      const t = d.transaction("files", mode), req = fn(t.objectStore("files"));
+      t.oncomplete = () => res(req.result); t.onerror = t.onabort = () => rej(t.error);
+    }));
+    return {
+      put: (key, files) => run("readwrite", st => st.put(files, key)),
+      get: key => run("readonly", st => st.get(key)).then(v => v || []),
+      del: key => run("readwrite", st => st.delete(key)).catch(() => {}),
+      clear: () => run("readwrite", st => st.clear()).catch(() => {})
+    };
+  })();
+
   /* ---------- WhatsApp ---------- */
   // api.whatsapp.com directly: wa.me's redirect mangles some characters (⚠, ❗, 🔴 arrive as "�") on desktop
   const waLink = text => `https://api.whatsapp.com/send?phone=${C.whatsapp}&text=${encodeURIComponent(text)}`;
@@ -41,16 +63,21 @@
   const cart = {
     items() { return store.get("t9_cart", []); },
     save(items) { store.set("t9_cart", items); updateCartCount(); renderCart(); },
-    add(item) {
+    // files (optional File[]) are kept in IndexedDB and sent with the cart order
+    async add(item, files) {
       const items = this.items();
       item.key = item.key || ("c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5));
+      if (files && files.length) {
+        try { await fileStore.put(item.key, files); item.files = files.length; }
+        catch { toast("Couldn't keep your files on this device - attach them in WhatsApp after checkout"); }
+      }
       items.push(item);
       if (!store.set("t9_cart", items)) { item.thumb = null; items[items.length - 1] = item; store.set("t9_cart", items); }
       updateCartCount(true); renderCart();
       toast(`${item.name} added to your order`);
     },
-    remove(key) { this.save(this.items().filter(i => i.key !== key)); },
-    clear() { this.save([]); },
+    remove(key) { fileStore.del(key); this.save(this.items().filter(i => i.key !== key)); },
+    clear() { fileStore.clear(); this.save([]); },
     total() { return this.items().reduce((s, i) => s + (i.total || 0), 0); },
     hasQuote() { return this.items().some(i => i.total == null); }
   };
@@ -78,6 +105,7 @@
     if (i.areas && i.areas.length) lines.push(`   Print: ${i.areas.join(", ")}`);
     if (i.design) lines.push(`   Design: ${i.design}`);
     if (i.notes) lines.push(`   Notes: ${i.notes}`);
+    if (i.files) lines.push(`   Files: ${i.files} attached`);
     lines.push(`   Est.: ${i.total != null ? money(i.total) : "Quote required"}`);
     return lines.join("\n");
   }
@@ -92,7 +120,7 @@
       `*Items*`, ...o.items.map((i, n) => itemText(i, n + 1)), ``,
       `*Estimated total:* ${o.total ? money(o.total) : "—"}${o.hasQuote ? " + quote items" : ""}`,
       o.customer.notes ? `*Notes:* ${o.customer.notes}` : null, ``,
-      o.items.some(i => i.hasArtwork) ? `I will attach my artwork / mockup files in this chat.` : `Please share artwork guidance.`,
+      o.items.some(i => i.files) ? `My artwork / print files are attached.` : o.items.some(i => i.hasArtwork) ? `I will attach my artwork / mockup files in this chat.` : `Please share artwork guidance.`,
       `Please confirm the final price & timeline.`
     ];
     return L.filter(l => l !== null).join("\n");
@@ -218,6 +246,7 @@
           <div class="card" style="padding:16px;background:var(--bg);box-shadow:none;margin-bottom:16px">
             <div class="total-row"><span>Items</span><span id="coCount"></span></div>
             <div class="total-row big" style="margin-top:6px"><span>Est. total</span><span id="coTotal"></span></div>
+            <p class="note" id="coFiles" style="margin:6px 0 0" hidden></p>
             <p class="note" style="margin:6px 0 0">Indicative price. Final quote confirmed on WhatsApp. No payment is taken on this website.</p>
           </div>
           <button class="btn btn--wa btn--block" type="submit">${I("whatsapp")} Send order on WhatsApp</button>
@@ -302,7 +331,7 @@
     body.innerHTML = items.map(i => `
       <div class="cart-line">
         <div class="cart-line__img">${thumbHTML(i)}</div>
-        <div><h4>${esc(i.name)}</h4><div class="meta">${[i.color, i.variant, i.sizes ? Object.entries(i.sizes).map(([s, q]) => `${s}×${q}`).join(", ") : null, `${i.qty} ${i.unit || "pcs"}`, i.areas?.length ? "Print: " + i.areas.join(", ") : null].filter(Boolean).map(esc).join(" · ")}</div>
+        <div><h4>${esc(i.name)}</h4><div class="meta">${[i.color, i.variant, i.sizes ? Object.entries(i.sizes).map(([s, q]) => `${s}×${q}`).join(", ") : null, `${i.qty} ${i.unit || "pcs"}`, i.areas?.length ? "Print: " + i.areas.join(", ") : null, i.files ? `${i.files} file${i.files > 1 ? "s" : ""} attached` : null].filter(Boolean).map(esc).join(" · ")}</div>
           <div style="font-weight:900;margin-top:4px">${i.total != null ? money(i.total) : '<span class="badge">Quote</span>'}</div></div>
         <button class="rm" type="button" data-remove="${esc(i.key)}" aria-label="Remove ${esc(i.name)}">${I("trash")}</button>
       </div>`).join("");
@@ -321,6 +350,27 @@
     ["name", "phone", "city"].forEach(k => { const el = $(`#checkoutForm [name=${k}]`); if (el && saved[k] && !el.value) el.value = saved[k]; });
     $$(".drawer.is-open").forEach(d => { d.classList.remove("is-open"); d.setAttribute("aria-hidden", "true"); });
     openLayer($("#checkoutModal"));
+    loadCheckoutFiles(items);
+  }
+  // read the cart's files before Send, so sharing can happen inside that tap
+  let coFiles = [];
+  function loadCheckoutFiles(items) {
+    const note = $("#coFiles"), send = $("#checkoutForm [type=submit]"), withFiles = items.filter(i => i.files);
+    coFiles = [];
+    note.hidden = !withFiles.length; send.disabled = false;
+    if (!withFiles.length) return;
+    note.textContent = "Attaching your files…"; send.disabled = true;
+    Promise.all(withFiles.map(i => fileStore.get(i.key).catch(() => []))).then(lists => {
+      const seen = new Set();
+      coFiles = lists.flat().map(f => { // the same name twice (two gang sheets) gets a number
+        let name = f.name, k = 1;
+        while (seen.has(name)) name = f.name.replace(/(\.[^.]+)?$/, `-${++k}$1`);
+        seen.add(name);
+        return name === f.name ? f : new File([f], name, { type: f.type });
+      });
+      note.textContent = coFiles.length ? `${coFiles.length} file${coFiles.length > 1 ? "s" : ""} will be sent with your order (print files, mockups and artwork).` : "Your files couldn't be loaded - attach them in WhatsApp after sending.";
+      send.disabled = false;
+    });
   }
 
   function validate(form) {
@@ -354,8 +404,19 @@
       store.set("t9_customer", { name: fd.name, phone: fd.phone, city: fd.city });
       const msg = orderMessage(o);
       o.message = msg; const saved = orders.add(o);
+      const files = coFiles; coFiles = [];
+      form.reset(); $("#coAddrWrap").hidden = true; $("#coAddr").required = false;
+      if (files.length) { // images go with the order: share sheet, or download + steps dialog
+        orderWithFiles({ text: msg, files }).then(res => {
+          if (res !== "shared") { toast(`Order ${o.id} created - attach your files and tap Send in WhatsApp`); return; }
+          closeLayers(); toast(`Order ${o.id} shared - tap Send in WhatsApp`);
+          if (saved) setTimeout(() => { location.href = "orders.html?new=" + encodeURIComponent(o.id); }, 1200);
+        });
+        cart.clear();
+        return;
+      }
       openWA(msg);
-      form.reset(); $("#coAddrWrap").hidden = true; $("#coAddr").required = false; closeLayers();
+      closeLayers();
       if (!saved) { toast("Order sent to WhatsApp (couldn't save history on this device)"); cart.clear(); return; }
       cart.clear();
       toast(`Order ${o.id} created — send it in WhatsApp`);
@@ -501,7 +562,7 @@
           const top = o.slice(0, 3).map(x => `• <b>${esc(x.id)}</b> — ${new Date(x.date).toLocaleDateString("en-IN")} · ${x.items.length} item(s)`).join("<br>");
           return { html: `Your recent orders on this device:<br>${top}<br><br>See details on <a href="orders.html">My Orders</a>, or ${wa(`Hi Trendli9, please share the status of my order ${o[0].id}.`, "ask for a status update on WhatsApp")}.`, quick: ["Talk to a human"] };
         } },
-      { k: /price|cost|rate|charge|how much|quote|₹|rs\b|rupee|per met|pricing/, r: () => ({ html: `Popular starting prices:<br>• <b>DTF gang sheet:</b> ${money(C.dtfPricePerMeter)} / metre (22 × 39 in sheets)<br>• <b>Custom T-shirt:</b> from ${money(349)} incl. front print<br>• <b>Hoodie:</b> from ${money(899)}<br>• <b>Bulk:</b> 5–20% off from 10 pcs<br><br>Try the <a href="index.html#calculator">DTF price calculator</a> or browse the <a href="shop.html">shop</a>. Final quotes are confirmed on WhatsApp.`, quick: ["Bulk order", "Design my own", "Talk to a human"] }) },
+      { k: /price|cost|rate|charge|how much|quote|₹|rs\b|rupee|per met|pricing/, r: () => ({ html: `Popular starting prices:<br>• <b>DTF gang sheet:</b> ${money(C.dtfPricePerMeter)} / metre (22 × 39 in sheets)<br>• <b>Custom T-shirt:</b> from ${money(349)} incl. front print<br>• <b>Hoodie:</b> from ${money(899)}<br>• <b>Bulk:</b> 5–20% off from 10 pcs<br><br>Try the <a href="gang-sheet.html">Gang Sheet Builder</a> for an instant estimate, or browse the <a href="shop.html">shop</a>. Final quotes are confirmed on WhatsApp.`, quick: ["Bulk order", "Design my own", "Talk to a human"] }) },
       { k: /service|what do you (do|offer)|offer/, r: () => ({ html: `We offer:<br>${CAT.SERVICES.map(s => `• <a href="services.html#${s.id}">${esc(s.name)}</a>`).join("<br>")}`, quick: ["DTF printing", "Saree & blouse", "Hotel branding", "Spare parts"] }) },
       { k: /dtf|transfer|gang ?sheet|film print/, r: () => ({ html: `<b>DTF (Direct-to-Film)</b> prints your design on film with white ink + adhesive powder. You press it on any fabric — cotton, polyester, blends, denim, nylon. Results are vibrant, stretchable and wash-durable.<br><br>Gang sheets start at <b>${money(C.dtfPricePerMeter)}/metre</b>. Ready-to-press single transfers are also available.`, quick: ["Prices", "Press instructions", "Order DTF"] }) },
       { k: /press|temperature|how to apply|heat|peel/, r: () => ({ html: `Heat-press guide:<br>• <b>Temp:</b> 150–160 °C<br>• <b>Time:</b> 12–15 seconds, medium-firm pressure<br>• <b>Peel:</b> hot or cold, as marked on the film<br>• Re-press 5 s with parchment for extra durability<br><br>Wash inside-out in cold water and avoid ironing directly on the print.` , quick: ["Order DTF", "Talk to a human"] }) },
