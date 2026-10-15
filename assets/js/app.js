@@ -647,6 +647,9 @@
      are ready in the click; or `getFiles` (async) and the customer gets one
      more tap once they're prepared, because sharing needs a fresh tap. */
   async function orderWithFiles({ text, files, getFiles }) {
+    // Preferred everywhere: open the studio's own chat with the order text and the order image
+    // (as the link preview) already in place. A share sheet can't pick the chat for the customer.
+    if (C.orderApi) return sendViaLink(text, files || getFiles());
     if (files) return sendNow(text, files);
     const probe = [new File([new Uint8Array(8)], "probe.png", { type: "image/png" })];
     if (!canShareFiles(probe)) {
