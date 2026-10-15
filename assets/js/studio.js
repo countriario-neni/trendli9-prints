@@ -147,10 +147,12 @@
   });
 
   /* ---------- upload ---------- */
+  const originals = new Map(); // file name -> original File, sent with WhatsApp orders
   function readFiles(files) {
     [...files].forEach(f => {
       if (!/^image\//.test(f.type)) return toast("Please upload an image file");
       if (f.size > 25 * 1024 * 1024) return toast("File is over 25 MB — send it on WhatsApp instead");
+      originals.set(f.name, f);
       const r = new FileReader();
       r.onload = () => {
         const img = new Image();
@@ -261,11 +263,24 @@
     cart.add(item); S.dirty = false;
     $("#cartBtn").click();
   });
+  // mockup PNG of each printed side + the original artwork files
+  async function orderFiles() {
+    const p = S.product, out = [];
+    for (const side of ["front", "back"]) {
+      if (!S.layers[side].length) continue;
+      const blob = await (await fetch(await renderPNG(side, 1400))).blob();
+      out.push(new File([blob], `trendli9-${p.id}-${side}-mockup.png`, { type: "image/png" }));
+    }
+    const names = new Set(S.layers.front.concat(S.layers.back).filter(L => L.type === "image").map(L => L.name));
+    names.forEach(n => { if (originals.has(n)) out.push(originals.get(n)); });
+    return out;
+  }
   $("#waNow").addEventListener("click", () => {
     if (needQty()) return;
     const i = buildItem(); S.dirty = false;
-    openWA([`Hi Trendli9! I designed this in your Design Studio:`, ``, `*${i.name}* — ${i.color}`, `Sizes: ${Object.entries(i.sizes).map(([s, q]) => `${s}×${q}`).join(", ")} (${i.qty} pcs)`,
-      `Print: ${i.areas.join(", ")}`, `Design: ${i.design}`, i.notes ? `Notes: ${i.notes}` : null, `Est.: ${money(i.total)}`, ``, `I'll attach my mockup & artwork here.`].filter(x => x !== null).join("\n"));
+    const text = [`Hi Trendli9! I designed this in your Design Studio:`, ``, `*${i.name}* — ${i.color}`, `Sizes: ${Object.entries(i.sizes).map(([s, q]) => `${s}×${q}`).join(", ")} (${i.qty} pcs)`,
+      `Print: ${i.areas.join(", ")}`, `Design: ${i.design}`, i.notes ? `Notes: ${i.notes}` : null, `Est.: ${money(i.total)}`, ``, `My mockup and artwork files are attached.`].filter(x => x !== null).join("\n");
+    window.T9.orderWithFiles({ text, getFiles: orderFiles }).catch(() => openWA(text));
   });
   addEventListener("beforeunload", e => { if (S.dirty && (S.layers.front.length || S.layers.back.length)) { e.preventDefault(); e.returnValue = ""; } });
 

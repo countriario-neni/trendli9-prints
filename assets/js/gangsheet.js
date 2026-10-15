@@ -599,7 +599,7 @@
   function update() {
     clearTimeout(timer);
     const L = state.layout = state.designs.length ? compute() : null;
-    renderSummary(L); draw(); renderOverflow(L); renderSteps(L); refreshCards(); renderRepeatNote(L); runNest(L);
+    renderSummary(L); draw(); renderOverflow(L); renderSteps(L); refreshCards(); renderRepeatNote(L); runNest(L); orderLayoutChanged();
     const ok = !!(L && L.prints);
     ["#gsAdd", "#gsWA", "#gsDL", "#gsPrev"].forEach(s => { $(s).disabled = !ok; });
     $("#gsGen").disabled = !state.designs.length;
@@ -914,7 +914,7 @@
     const n = L.sheets.length;
     T9.cart.add({
       productId: "dtf-gang-sheet", name: "DTF Gang Sheet", img: "svc-dtf",
-      qty: n, unit: n === 1 ? "sheet" : "sheets",
+      qty: n, unit: "sheet",
       variant: `${SHEET_W} × ${SHEET_H} in · ${L.prints} prints`,
       total: L.price, hasArtwork: true,
       notes: summaryLines(L).join("; "),
@@ -923,19 +923,82 @@
     document.getElementById("cartBtn")?.click();
   });
 
-  $("#gsWA").addEventListener("click", () => {
-    const L = state.layout; if (!L || !L.prints) return;
-    const msg = [
-      "Hi Trendli9! I'd like to order a DTF gang sheet:",
-      "",
-      `*Sheet size:* ${SHEET_W} × ${SHEET_H} in (vertical) · Sheets: ${L.sheets.length}`,
-      `*Prints (${L.prints}):*`,
-      ...summaryLines(L).map(s => `• ${s}`),
-      `*Estimated price:* ${money(L.price)} (from ${money(PRICE_M)} per metre — to be confirmed)`,
-      "",
-      "I'll attach the print file here."
+  /* Order on WhatsApp — the order text plus the rendered sheets and every original design.
+     Files are rendered while the form is open, so the Send tap can share them straight away. */
+  const ordModal = $("#gsOrderModal"), ordForm = $("#gsOrderForm"), ordSend = $("#gsOrdSend");
+  let prep = null; // { L, files: Promise<File[]> }
+  const dpiNote = d => {
+    const dpi = dpiOf(d);
+    return !isFinite(dpi) ? "vector ✓" : dpi >= 300 ? `${dpi} DPI ✓` : dpi >= 150 ? `${dpi} DPI ⚠ review` : `${dpi} DPI ⚠ low resolution`;
+  };
+  function orderText(L, ctype, notes) {
+    const nOrig = perDesign(L).size;
+    return [
+      "*New gang sheet order — Trendli9 Prints*",
+      `Sheet size: ${SHEET_W} × ${SHEET_H} in (vertical) · Sheets: ${L.sheets.length}`,
+      "Designs:",
+      ...Array.from(perDesign(L), ([d, n]) => `• ${d.name} — ${plural(n, "copy", "copies")} @ ${f2(d.wIn)} × ${f2(d.hIn)} in (${dpiNote(d)})`),
+      `Estimated price: ${money(L.price)} (from ${money(PRICE_M)} per metre — to be confirmed)`,
+      `Customer type: ${ctype}`,
+      `Notes: ${notes || "—"}`,
+      `Files: ${plural(L.sheets.length, "print sheet")} (${SHEET_W} × ${SHEET_H} in, ${DPI} DPI PNG) + ${plural(nOrig, "original design")}`
     ].join("\n");
-    T9.openWA(msg);
+  }
+  function originals(L) {
+    const seen = new Map(), out = [];
+    for (const d of perDesign(L).keys()) {
+      if (out.some(f => f.src === d.file)) continue; // the same upload used twice
+      let name = d.name, k = seen.get(name) || 0;
+      seen.set(name, k + 1);
+      if (k) name = name.replace(/(\.[^.]+)?$/, `-${k + 1}$1`);
+      const f = d.file instanceof File && d.file.name === name ? d.file : new File([d.file], name, { type: d.file.type || "image/png" });
+      f.src = d.file; out.push(f);
+    }
+    return out;
+  }
+  function prepareFiles(L) {
+    if (prep && prep.L === L) return prep.files;
+    const status = $("#gsOrdFiles"), n = L.sheets.length;
+    const files = (async () => {
+      const out = [];
+      for (let i = 0; i < n; i++) {
+        const blob = await sheetPNG(L, L.sheets[i], p => { if (prep && prep.L === L) status.textContent = `Preparing print files… sheet ${i + 1} of ${n} (${Math.round(p * 100)}%)`; });
+        out.push(new File([blob], sheetName(i, n), { type: "image/png" }));
+      }
+      return out.concat(originals(L));
+    })();
+    prep = { L, files };
+    return files;
+  }
+  function readyOrder() {
+    const L = state.layout; if (!L || !L.prints) return;
+    $("#gsOrdSum").textContent = `${plural(L.sheets.length, "sheet")} · ${SHEET_W} × ${SHEET_H} in · ${plural(L.prints, "copy", "copies")} · estimated ${money(L.price)}`;
+    ordSend.disabled = true;
+    prepareFiles(L).then(files => {
+      // the layout changed meanwhile (e.g. a size field committed on blur): prepare the current one
+      if (state.layout !== L) { if (ordModal.classList.contains("is-open")) readyOrder(); return; }
+      if (prep && prep.L === L) prep.ready = files;
+      $("#gsOrdFiles").textContent = `Ready: ${plural(L.sheets.length, "print sheet")} + ${plural(files.length - L.sheets.length, "original design")}.`;
+      ordSend.disabled = false;
+    }, () => { $("#gsOrdFiles").textContent = "Couldn't render the print files on this device — your order text will still be sent."; prep = null; ordSend.disabled = false; });
+  }
+  // keep the order form's files in step with the layout
+  function orderLayoutChanged() { if (ordModal.classList.contains("is-open")) readyOrder(); }
+  $("#gsWA").addEventListener("click", () => {
+    if (!state.layout || !state.layout.prints) return;
+    T9.openLayer(ordModal); readyOrder();
+  });
+  ordForm.addEventListener("change", e => { if (e.target.name === "ctype") $("#gsOrdTypeField").classList.remove("has-error"); });
+  ordForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    const L = state.layout; if (!L || !L.prints) return;
+    const fd = new FormData(ordForm), ctype = fd.get("ctype");
+    if (!ctype) { $("#gsOrdTypeField").classList.add("has-error"); ordForm.querySelector("[name=ctype]").focus(); return; }
+    const text = orderText(L, ctype, (fd.get("notes") || "").trim());
+    const files = prep && prep.L === L && prep.ready || []; // read synchronously: sharing needs this tap
+    if (!files.length) { T9.openWA(text); T9.closeLayers(); return; } // no files on this device: text only
+    const res = await T9.orderWithFiles({ text, files });
+    if (res === "shared") { T9.closeLayers(); toast("Order shared — tap Send in WhatsApp"); }
   });
 
   const dlBtn = $("#gsDL");
@@ -1023,14 +1086,15 @@
       if (job !== nestJob || state.layout !== L) return;
       const saved = L.sheets.length - res.sheets.length;
       if (saved <= 0 || res.sheets.flat().length !== all.length) { nestNote("No saving, kept box layout."); return; }
-      L.eff *= L.sheets.length / res.sheets.length;
-      L.sheets = res.sheets.map(sh => sh.map(q => {
-        const d = refs[q.d];
-        return { x: q.x * CELL, y: q.y * CELL, w: (q.rot ? d.hIn : d.wIn) + L.g, h: (q.rot ? d.wIn : d.hIn) + L.g, rot: q.rot, ref: d };
-      }));
-      L.price = L.sheets.length * PRICE_M; L.shape = true;
-      renderSummary(L); draw(); refreshCards(); renderRepeatNote(L);
-      nestNote(`Saved ${plural(saved, "sheet")} — the true-shape layout uses ${plural(L.sheets.length, "sheet")}.`);
+      const N = state.layout = {
+        ...L, shape: true, eff: L.eff * L.sheets.length / res.sheets.length, price: res.sheets.length * PRICE_M,
+        sheets: res.sheets.map(sh => sh.map(q => {
+          const d = refs[q.d];
+          return { x: q.x * CELL, y: q.y * CELL, w: (q.rot ? d.hIn : d.wIn) + L.g, h: (q.rot ? d.wIn : d.hIn) + L.g, rot: q.rot, ref: d };
+        }))
+      };
+      renderSummary(N); draw(); refreshCards(); renderRepeatNote(N); orderLayoutChanged();
+      nestNote(`Saved ${plural(saved, "sheet")} — the true-shape layout uses ${plural(N.sheets.length, "sheet")}.`);
     }).catch(() => { if (job === nestJob) nestNote("True-shape nesting isn't available on this device — kept box layout."); });
   }
 

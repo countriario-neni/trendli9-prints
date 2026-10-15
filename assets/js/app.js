@@ -21,7 +21,8 @@
   };
 
   /* ---------- WhatsApp ---------- */
-  const waLink = text => `https://wa.me/${C.whatsapp}?text=${encodeURIComponent(text)}`;
+  // api.whatsapp.com directly: wa.me's redirect mangles some characters (⚠, ❗, 🔴 arrive as "�") on desktop
+  const waLink = text => `https://api.whatsapp.com/send?phone=${C.whatsapp}&text=${encodeURIComponent(text)}`;
   const openWA = text => { const url = waLink(text), w = window.open(url, "_blank"); if (w) w.opener = null; else location.href = url; };
 
   /* ---------- pricing ---------- */
@@ -220,6 +221,35 @@
         </form>
       </div>
     </div>
+    <div class="modal" id="filesModal" role="dialog" aria-modal="true" aria-labelledby="fmTitle" aria-hidden="true">
+      <div class="modal__dialog modal__dialog--sm">
+        <button class="icon-btn modal__close" type="button" data-close-modal aria-label="Close">${I("close")}</button>
+        <div class="modal__body">
+          <div id="fmReady">
+            <p class="eyebrow">Order on WhatsApp</p>
+            <h2 id="fmTitle" style="font-size:1.5rem">Your files are ready</h2>
+            <p class="muted" id="fmReadyTxt">Preparing your files…</p>
+            <div style="display:grid;gap:8px">
+              <button class="btn btn--wa btn--block" type="button" id="fmShare" disabled>${I("whatsapp")} Share to WhatsApp</button>
+              <button class="btn btn--ghost btn--block" type="button" id="fmNoShare">Can't share? Download instead</button>
+            </div>
+          </div>
+          <div id="fmSteps" hidden>
+            <p class="eyebrow">Almost done</p>
+            <h2 style="font-size:1.5rem">Attach your files in WhatsApp</h2>
+            <ol class="fm-steps">
+              <li><b>1</b><span>Your files are downloaded.<small id="fmList"></small></span></li>
+              <li><b>2</b><span id="fmStep2">In the WhatsApp chat that just opened, tap 📎 and attach them.<small>Choose “Document” so WhatsApp doesn't compress your print files.</small></span></li>
+              <li><b>3</b><span>Send.</span></li>
+            </ol>
+            <div style="display:grid;gap:8px">
+              <a class="btn btn--wa btn--block" id="fmWA" href="#" target="_blank" rel="noopener">${I("whatsapp")} Open the WhatsApp chat</a>
+              <button class="btn btn--ghost btn--block" type="button" id="fmAgain">${I("download")} Download the files again</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
       <button class="lightbox__btn lightbox__close" type="button" aria-label="Close">${I("close")}</button>
       <button class="lightbox__btn lightbox__prev" type="button" aria-label="Previous">${I("arrowL")}</button>
@@ -326,6 +356,63 @@
       cart.clear();
       toast(`Order ${o.id} created — send it in WhatsApp`);
       setTimeout(() => { location.href = "orders.html?new=" + encodeURIComponent(o.id); }, 1200);
+    });
+  }
+
+  /* ---------- WhatsApp orders with images ----------
+     wa.me links carry text only. Where the browser can share files (mostly
+     phones) the Web Share API sends the images and the order text together;
+     otherwise the files are downloaded, WhatsApp opens with the text, and a
+     short steps dialog explains how to attach them. */
+  function saveFile(file) {
+    const url = URL.createObjectURL(file), a = document.createElement("a");
+    a.href = url; a.download = file.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+  async function downloadAll(files) {
+    for (const f of files) { saveFile(f); await new Promise(r => setTimeout(r, 400)); } // one after another
+  }
+  const canShareFiles = files => { try { return !!(navigator.canShare && navigator.canShare({ files })); } catch { return false; } };
+  function showSteps(text, files, waOpened) {
+    $("#fmReady").hidden = true; $("#fmSteps").hidden = false;
+    $("#fmList").textContent = files.map(f => f.name).join(" · ");
+    $("#fmStep2").firstChild.textContent = waOpened ? "In the WhatsApp chat that just opened, tap 📎 and attach them." : "Open the WhatsApp chat below, tap 📎 and attach them.";
+    $("#fmWA").href = waLink(text);
+    $("#fmAgain").onclick = () => downloadAll(files);
+    closeLayers(); openLayer($("#filesModal"));
+  }
+  // files are downloaded and wa.me opens; call inside a click so the new tab isn't blocked
+  function fallbackOrder(text, files) {
+    openWA(text);
+    downloadAll(files);
+    showSteps(text, files, true);
+    return "fallback";
+  }
+  function shareNow(text, files) {
+    return navigator.share({ files, text }).then(() => "shared", err => {
+      if (err && err.name === "AbortError") return "cancelled";
+      downloadAll(files); showSteps(text, files, false); // e.g. too large to share
+      return "fallback";
+    });
+  }
+  /* Send an order with its images. `files` (File[]) must be ready when this runs
+     in a click; or pass `getFiles` (async) and phones get one extra "Share" tap
+     once the files are prepared, because sharing needs a fresh tap. */
+  async function orderWithFiles({ text, files, getFiles }) {
+    const probe = files && files.length ? files : [new File([new Uint8Array(8)], "probe.png", { type: "image/png" })];
+    if (files) return canShareFiles(files) ? shareNow(text, files) : fallbackOrder(text, files);
+    if (!canShareFiles(probe)) { openWA(text); const f = await getFiles(); downloadAll(f); showSteps(text, f, true); return "fallback"; }
+    $("#fmReady").hidden = false; $("#fmSteps").hidden = true;
+    const share = $("#fmShare"), txt = $("#fmReadyTxt");
+    share.disabled = true; txt.textContent = "Preparing your files…";
+    openLayer($("#filesModal"));
+    const f = await getFiles();
+    txt.textContent = `${f.length === 1 ? "1 file" : f.length + " files"} ready. Tap Share, pick WhatsApp and choose the ${C.brand} chat (${C.phoneDisplay}) — your images and order details go together.`;
+    share.disabled = false; share.focus();
+    return new Promise(resolve => {
+      share.onclick = () => { if (!canShareFiles(f)) { resolve(fallbackOrder(text, f)); return; } closeLayers(); shareNow(text, f).then(resolve); };
+      $("#fmNoShare").onclick = () => resolve(fallbackOrder(text, f));
     });
   }
 
@@ -539,5 +626,5 @@
   bindGlobal(); bindCheckout(); initLightbox(); updateCartCount(); renderCart();
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initMotion); else initMotion();
 
-  window.T9 = { safeThumb, safeHex, hydrate, $, $$, esc, money, waLink, openWA, cart, orders, priceLine, tierFor, toast, store, orderMessage, openLayer, closeLayers, validate, reduceMotion };
+  window.T9 = { safeThumb, safeHex, hydrate, $, $$, esc, money, waLink, openWA, orderWithFiles, cart, orders, priceLine, tierFor, toast, store, orderMessage, openLayer, closeLayers, validate, reduceMotion };
 })();

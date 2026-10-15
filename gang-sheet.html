@@ -10,8 +10,8 @@
   <meta property="og:title" content="Gang Sheet Builder — Trendli9 Prints"><meta property="og:image" content="assets/img/og-image.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261016c">
-  <link rel="stylesheet" href="assets/css/gangsheet.css?v=20261016c">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261016e">
+  <link rel="stylesheet" href="assets/css/gangsheet.css?v=20261016e">
 </head>
 <body>
   <div id="site-header"></div>
@@ -194,12 +194,31 @@
       </div>
     </section>
   </main>
+  <div class="modal" id="gsOrderModal" role="dialog" aria-modal="true" aria-labelledby="gsOrdTitle" aria-hidden="true">
+    <div class="modal__dialog modal__dialog--sm">
+      <button class="icon-btn modal__close" type="button" data-close-modal aria-label="Close"><i data-icon="close"></i></button>
+      <form class="modal__body" id="gsOrderForm" novalidate>
+        <p class="eyebrow">Order on WhatsApp</p>
+        <h2 id="gsOrdTitle" style="font-size:1.5rem">Send your gang sheet</h2>
+        <p class="muted" id="gsOrdSum"></p>
+        <div class="field" id="gsOrdTypeField"><span class="label">You're ordering as <span class="req">*</span></span>
+          <div class="opt-group" role="radiogroup" aria-label="Customer type">
+            <label class="opt"><input type="radio" name="ctype" value="Business"><span><i data-icon="building"></i> Business</span></label>
+            <label class="opt"><input type="radio" name="ctype" value="Individual"><span><i data-icon="users"></i> Individual</span></label>
+          </div><span class="err">Choose Business or Individual</span></div>
+        <div class="field"><label for="gsOrdNotes">Notes</label><textarea class="textarea" id="gsOrdNotes" name="notes" rows="3" placeholder="Garment, colours, deadline, pickup or courier…"></textarea></div>
+        <p class="note" id="gsOrdFiles" aria-live="polite"></p>
+        <button class="btn btn--wa btn--block" type="submit" id="gsOrdSend" disabled><i data-icon="whatsapp"></i> <span>Send order on WhatsApp</span></button>
+        <p class="note" style="margin:10px 0 0">Your print files and original designs go with the order. The price is an estimate — we confirm it on WhatsApp.</p>
+      </form>
+    </div>
+  </div>
   <div id="site-footer"></div>
-  <script src="assets/js/config.js?v=20261016c"></script>
-  <script src="assets/js/catalog.js?v=20261016c"></script>
-  <script src="assets/js/icons.js?v=20261016c"></script>
-  <script src="assets/js/mockups.js?v=20261016c"></script>
-  <script src="assets/js/app.js?v=20261016c"></script>
-  <script src="assets/js/gangsheet.js?v=20261016c"></script>
+  <script src="assets/js/config.js?v=20261016e"></script>
+  <script src="assets/js/catalog.js?v=20261016e"></script>
+  <script src="assets/js/icons.js?v=20261016e"></script>
+  <script src="assets/js/mockups.js?v=20261016e"></script>
+  <script src="assets/js/app.js?v=20261016e"></script>
+  <script src="assets/js/gangsheet.js?v=20261016e"></script>
 </body>
 </html>
