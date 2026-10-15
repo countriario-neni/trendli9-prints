@@ -10,8 +10,8 @@
   <meta property="og:title" content="Gang Sheet Builder — Trendli9 Prints"><meta property="og:image" content="assets/img/og-image.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261016a">
-  <link rel="stylesheet" href="assets/css/gangsheet.css?v=20261016a">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261016b">
+  <link rel="stylesheet" href="assets/css/gangsheet.css?v=20261016b">
 </head>
 <body>
   <div id="site-header"></div>
@@ -29,79 +29,151 @@
       </div>
     </section>
 
-    <section class="section section--tint gs-section">
-      <div class="container gs-work">
-        <!-- LEFT: controls -->
-        <div class="gs-controls">
-          <div class="panel">
-            <h2><i data-icon="upload"></i> Upload artwork</h2>
-            <label class="drop" id="gsDrop" for="gsFile"><i data-icon="upload"></i><b>Drop files or click to browse</b><small>PNG with transparent background works best · JPG, WEBP, SVG · multiple files OK</small></label>
-            <input type="file" id="gsFile" class="sr-only" accept="image/png,image/jpeg,image/webp,image/svg+xml" multiple>
-          </div>
-
-          <div class="panel">
-            <div class="gs-panel-head">
-              <h2><span class="n">01</span> Designs &amp; sizes</h2>
-              <button type="button" class="btn btn--sm btn--ghost" id="gsGuideBtn" aria-expanded="false" aria-controls="gsGuide"><i data-icon="ruler"></i> Size guide</button>
-            </div>
-            <div class="gs-guide" id="gsGuide" hidden>
-              <p class="gs-note">Tap a size to apply it to the highlighted design.</p>
-              <div class="gs-guide__chips" role="group" aria-label="Common print widths">
-                <button type="button" class="chip" data-size="3.5">Pocket / logo · 3–4 in</button>
-                <button type="button" class="chip" data-size="7.5">Kids chest · 7–8 in</button>
-                <button type="button" class="chip" data-size="11">Adult chest · 10–12 in</button>
-                <button type="button" class="chip" data-size="12.5">Full back · 11–14 in</button>
-                <button type="button" class="chip" data-size="2.75">Sleeve · 2.5–3 in</button>
-              </div>
-            </div>
-            <ul class="gs-list" id="gsList" aria-label="Designs"></ul>
-            <p class="gs-empty-list" id="gsListEmpty">No designs yet — upload artwork above.</p>
-          </div>
-
-          <div class="panel">
-            <h2><span class="n">02</span> Layout</h2>
-            <div class="gs-layout">
-              <div class="field"><label for="gsMargin">Edge margin (in)</label><input class="input" type="number" id="gsMargin" min="0" max="1" step="0.05" value="0.25" inputmode="decimal"></div>
-              <div class="field"><label for="gsGap">Spacing between prints (in)</label><input class="input" type="number" id="gsGap" min="0" max="2" step="0.05" value="0.30" inputmode="decimal"></div>
-            </div>
-            <label class="gs-switch"><input type="checkbox" id="gsRotate" checked><span>Allow 90° rotation to save film</span></label>
-          </div>
-
-          <div class="panel gs-summary-panel">
-            <h2><span class="n">03</span> Summary</h2>
-            <dl class="gs-summary" id="gsSummary" aria-live="polite" aria-atomic="true"></dl>
-            <p class="gs-note" id="gsPriceNote"></p>
-            <div class="gs-actions">
-              <button class="btn btn--accent btn--block" type="button" id="gsAdd" disabled><i data-icon="cart"></i> Add sheet to order</button>
-              <button class="btn btn--wa btn--block" type="button" id="gsWA" disabled><i data-icon="whatsapp"></i> Order on WhatsApp</button>
-              <button class="btn btn--ghost btn--block" type="button" id="gsDL" disabled><i data-icon="download"></i> <span>Download print files</span></button>
-            </div>
+    <section class="section section--tint gs-section" aria-labelledby="gsTitle">
+      <div class="container">
+        <div class="gs-top">
+          <h2 class="gs-title" id="gsTitle">Create Your Gang Sheet</h2>
+          <div class="seg-ctrl gs-seg" role="group" aria-label="Builder mode" id="gsModeSeg">
+            <button type="button" data-mode="multi" aria-pressed="true">Multiple designs</button>
+            <button type="button" data-mode="repeat" aria-pressed="false">Repeat one design</button>
           </div>
         </div>
 
-        <!-- RIGHT: preview -->
-        <div class="gs-preview">
-          <div class="gs-preview__bar">
-            <span class="eyebrow gs-preview__label">Live preview</span>
-            <div class="seg-ctrl gs-seg gs-seg--sm" role="group" aria-label="Preview background" id="gsBgSeg">
-              <button type="button" data-bg="checker" aria-pressed="true">Checker</button>
-              <button type="button" data-bg="white" aria-pressed="false">White</button>
-              <button type="button" data-bg="black" aria-pressed="false">Black</button>
+        <div class="gs-work">
+          <!-- LEFT: designs -->
+          <div class="gs-controls">
+            <div class="panel">
+              <h2><i data-icon="upload"></i> Upload artwork</h2>
+              <label class="drop" id="gsDrop" for="gsFile"><i data-icon="upload"></i><b>Drop files or click to browse</b><small>PNG with transparent background works best · JPG, WEBP, SVG · up to 100 MB each · multiple files OK</small></label>
+              <input type="file" id="gsFile" class="sr-only" accept="image/png,image/jpeg,image/webp,image/svg+xml" multiple>
+            </div>
+
+            <div class="panel" id="gsRepeatPanel" hidden>
+              <h2><i data-icon="copy"></i> Repeat print</h2>
+              <div class="field" id="gsRepeatPickWrap" hidden><label for="gsRepeatPick">Design to repeat</label><select id="gsRepeatPick"></select></div>
+              <span class="gs-label">Fill by</span>
+              <div class="seg-ctrl gs-seg gs-seg--sm" role="group" aria-label="Fill by" id="gsRepeatBy">
+                <button type="button" data-by="copies" aria-pressed="true">Copy count</button>
+                <button type="button" data-by="sheets" aria-pressed="false">Fill sheets</button>
+              </div>
+              <div class="gs-repeat-n">
+                <label for="gsRepeatN" id="gsRepeatNLabel">Copies</label>
+                <div class="qty" role="group" aria-labelledby="gsRepeatNLabel">
+                  <button type="button" data-rep="-1" aria-label="Less">−</button>
+                  <input type="number" id="gsRepeatN" min="1" max="2000" value="10" inputmode="numeric">
+                  <button type="button" data-rep="1" aria-label="More">+</button>
+                </div>
+              </div>
+              <p class="gs-note" id="gsRepeatNote" aria-live="polite"></p>
+            </div>
+
+            <div class="panel">
+              <div class="gs-panel-head">
+                <h2 class="gs-list-title">Uploaded images <span class="muted" id="gsReady">· 0 ready for layout</span></h2>
+                <button type="button" class="btn btn--sm btn--ghost" id="gsGuideBtn" aria-expanded="false" aria-controls="gsGuide"><i data-icon="ruler"></i> Size guide</button>
+              </div>
+              <div class="gs-issues" id="gsIssues">
+                <button type="button" class="chip gs-chip gs-chip--bad" data-jump="is-bad" hidden></button>
+                <button type="button" class="chip gs-chip gs-chip--review" data-jump="is-review" hidden></button>
+              </div>
+              <div class="gs-guide" id="gsGuide" hidden>
+                <p class="gs-note">Tap a size to apply it to the highlighted design.</p>
+                <div class="gs-guide__chips" role="group" aria-label="Common print widths">
+                  <button type="button" class="chip" data-size="3.5">Pocket / logo · 3–4 in</button>
+                  <button type="button" class="chip" data-size="7.5">Kids chest · 7–8 in</button>
+                  <button type="button" class="chip" data-size="11">Adult chest · 10–12 in</button>
+                  <button type="button" class="chip" data-size="12.5">Full back · 11–14 in</button>
+                  <button type="button" class="chip" data-size="2.75">Sleeve · 2.5–3 in</button>
+                </div>
+              </div>
+              <ul class="gs-list" id="gsList" aria-label="Designs"></ul>
+              <p class="gs-empty-list" id="gsListEmpty">No designs yet — upload artwork above.</p>
+            </div>
+
+            <div class="panel">
+              <h2><i data-icon="grid"></i> Layout</h2>
+              <div class="field gs-margin"><label for="gsMargin">Edge margin (in)</label><input class="input" type="number" id="gsMargin" min="0" max="1" step="0.05" value="0.25" inputmode="decimal"></div>
+              <label class="gs-switch"><input type="checkbox" id="gsRotate" checked><span>Allow 90° rotation to save film</span></label>
+              <label class="gs-switch" id="gsTogetherWrap"><input type="checkbox" id="gsTogether"><span>Keep each design close together</span></label>
+            </div>
+
+            <div class="panel gs-summary-panel">
+              <h2><i data-icon="receipt"></i> Summary</h2>
+              <dl class="gs-summary" id="gsSummary" aria-live="polite" aria-atomic="true"></dl>
+              <p class="gs-note" id="gsPriceNote"></p>
+              <div class="gs-actions">
+                <button class="btn btn--wa btn--block" type="button" id="gsWA" disabled><i data-icon="whatsapp"></i> Order on WhatsApp</button>
+                <button class="btn btn--ghost btn--block" type="button" id="gsAdd" disabled><i data-icon="cart"></i> Add sheets to cart</button>
+              </div>
             </div>
           </div>
-          <div class="gs-warn" id="gsOverflow" role="alert" hidden></div>
-          <div class="gs-canvas-wrap" id="gsWrap">
-            <div class="gs-sheets" id="gsSheets"></div>
-            <div class="gs-empty" id="gsEmpty">
-              <i data-icon="layers"></i>
-              <b>Your sheet will appear here</b>
-              <span>Upload artwork to start packing.</span>
+
+          <!-- RIGHT: live preview -->
+          <div class="gs-preview" id="gsPreview" tabindex="-1">
+            <div class="gs-preview__bar">
+              <div>
+                <span class="eyebrow gs-preview__label">Live preview</span>
+                <p class="gs-big" id="gsBig" aria-live="polite">0 sheets · 22 × 39 in</p>
+              </div>
+              <div class="seg-ctrl gs-seg gs-seg--sm" role="group" aria-label="Preview background" id="gsBgSeg">
+                <button type="button" data-bg="checker" aria-pressed="true">Checker</button>
+                <button type="button" data-bg="white" aria-pressed="false">White</button>
+                <button type="button" data-bg="black" aria-pressed="false">Black</button>
+              </div>
             </div>
+            <div class="gs-warn" id="gsOverflow" role="alert" hidden></div>
+            <div class="gs-canvas-wrap" id="gsWrap">
+              <div class="gs-sheets" id="gsSheets"></div>
+              <div class="gs-empty" id="gsEmpty">
+                <i data-icon="layers"></i>
+                <b>Your sheet will appear here</b>
+                <span>Upload artwork to start packing.</span>
+              </div>
+            </div>
+            <p class="gs-note gs-preview__meta" id="gsMeta"></p>
           </div>
-          <p class="gs-note gs-preview__meta" id="gsMeta"></p>
+        </div>
+
+        <!-- sticky action bar -->
+        <div class="gs-bar" role="region" aria-label="Layout actions">
+          <div class="gs-bar__gap"><label for="gsGap">Spacing</label><input class="input" type="number" id="gsGap" min="0" max="2" step="0.05" value="0.30" inputmode="decimal"><span>in</span></div>
+          <p class="gs-bar__total" id="gsTotal" aria-live="polite">0 copies · 0 sheets</p>
+          <div class="gs-bar__btns">
+            <button class="btn btn--sm btn--ghost" type="button" id="gsPrev" disabled><i data-icon="search"></i> <span>Preview</span></button>
+            <button class="btn btn--sm btn--ghost" type="button" id="gsDL" disabled><i data-icon="download"></i> <span>Download</span></button>
+            <button class="btn btn--sm btn--accent" type="button" id="gsGen" disabled><i data-icon="grid"></i> Generate Layout</button>
+          </div>
         </div>
       </div>
     </section>
+
+    <!-- upload progress -->
+    <div class="gs-upload" id="gsUpload" hidden>
+      <div class="gs-upload__card" role="status" aria-live="polite">
+        <div class="gs-upload__thumb"><img id="gsUpThumb" alt=""></div>
+        <b>Bringing your images in</b>
+        <span class="gs-upload__count" id="gsUpCount">0 / 0</span>
+        <span class="gs-upload__bar"><i id="gsUpBar"></i></span>
+        <small>Please keep this tab open</small>
+      </div>
+    </div>
+
+    <!-- sheet lightbox -->
+    <div class="gs-lb" id="gsLb" role="dialog" aria-modal="true" aria-labelledby="gsLbTitle" hidden>
+      <div class="gs-lb__bar">
+        <b id="gsLbTitle">Sheet 1</b>
+        <div class="gs-lb__tools">
+          <button type="button" class="gs-lb__btn" data-lb="prev" aria-label="Previous sheet"><i data-icon="arrowL"></i></button>
+          <button type="button" class="gs-lb__btn" data-lb="next" aria-label="Next sheet"><i data-icon="arrow"></i></button>
+          <button type="button" class="gs-lb__btn" data-lb="out" aria-label="Zoom out"><i data-icon="minus"></i></button>
+          <button type="button" class="gs-lb__btn" data-lb="in" aria-label="Zoom in"><i data-icon="plus"></i></button>
+          <button type="button" class="gs-lb__btn gs-lb__btn--txt" data-lb="fit">Fit</button>
+          <button type="button" class="gs-lb__btn" data-lb="close" aria-label="Close"><i data-icon="close"></i></button>
+        </div>
+      </div>
+      <div class="gs-lb__stage" id="gsLbStage"><canvas id="gsLbCanvas" role="img" aria-label="Enlarged sheet"></canvas></div>
+      <p class="gs-lb__hint">Scroll or pinch to zoom · drag to pan · Esc to close</p>
+    </div>
 
     <section class="section gs-notes">
       <div class="container">
@@ -117,11 +189,11 @@
     </section>
   </main>
   <div id="site-footer"></div>
-  <script src="assets/js/config.js?v=20261016a"></script>
-  <script src="assets/js/catalog.js?v=20261016a"></script>
-  <script src="assets/js/icons.js?v=20261016a"></script>
-  <script src="assets/js/mockups.js?v=20261016a"></script>
-  <script src="assets/js/app.js?v=20261016a"></script>
-  <script src="assets/js/gangsheet.js?v=20261016a"></script>
+  <script src="assets/js/config.js?v=20261016b"></script>
+  <script src="assets/js/catalog.js?v=20261016b"></script>
+  <script src="assets/js/icons.js?v=20261016b"></script>
+  <script src="assets/js/mockups.js?v=20261016b"></script>
+  <script src="assets/js/app.js?v=20261016b"></script>
+  <script src="assets/js/gangsheet.js?v=20261016b"></script>
 </body>
 </html>

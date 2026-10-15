@@ -17,7 +17,7 @@
   const SHEET_W = 22, SHEET_H = 39, DPI = 300;           // inches · print resolution
   const PRICE_M = C.dtfPricePerMeter || 250;             // each 39 in sheet is billed as 1 metre
   const SIZE_MIN = 0.25, W_MAX = 21.5, H_MAX = SHEET_H - 0.5;
-  const GAP_MAX = 2, MARGIN_MAX = 1;
+  const GAP_MAX = 2, MARGIN_MAX = 1, COPIES_MAX = 2000, MAX_BYTES = 100 * 1024 * 1024;
   const IMPORT_KEY = "t9_gangsheet_import";
   const TYPES = /^image\/(png|jpeg|webp|svg\+xml)$/;
   const EXT = /\.(png|jpe?g|webp|svg)$/i;
@@ -25,10 +25,13 @@
   const f2 = n => (Math.round(n * 100) / 100).toFixed(2);
   const inch = n => f2(n) + " in";
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const plural = (n, one, many = one + "s") => `${n} ${n === 1 ? one : many}`;
 
   const state = {
+    mode: "multi",        // "multi" | "repeat"
     designs: [],          // see addFile()
-    margin: 0.25, gap: 0.3, rotate: true,
+    margin: 0.25, gap: 0.3, rotate: true, together: false,
+    repeatId: null, repeatBy: "copies", repCopies: 10, repSheets: 1,
     bg: "checker",
     activeId: null,
     layout: null          // last packing result
@@ -110,13 +113,20 @@
     (a, b) => b.h - a.h || b.w - a.w,
     (a, b) => b.w - a.w || b.h - a.h
   ];
+  // "together": order design by design, so every copy of a design is placed next to its siblings
+  function ordered(items, ord, together) {
+    if (!together) return items.slice().sort(ord);
+    const groups = new Map();
+    items.forEach(it => { if (!groups.has(it.ref)) groups.set(it.ref, []); groups.get(it.ref).push(it); });
+    return Array.from(groups.values()).sort((a, b) => ord(a[0], b[0])).flat();
+  }
   const usedH = placed => placed.reduce((m, p) => Math.max(m, p.y + p.h), 0);
   // Fill sheet after sheet until everything is placed; keep the ordering/rule that needs fewest sheets.
-  function packSheets(items, binW, binH, allowRot) {
+  function packSheets(items, binW, binH, allowRot, together) {
     if (!items.length) return [];
     let best = null, bestTail = Infinity;
     for (const ord of ORDERS) {
-      const sorted = items.slice().sort(ord);
+      const sorted = ordered(items, ord, together);
       for (const rule of ["bottom", "bssf"]) {
         const sheets = [];
         let rest = sorted;
@@ -131,7 +141,6 @@
     }
     return best;
   }
-  window.T9_GANG = { packSheets }; // exposed for testing
 
   /* ======================================================
      Model helpers (inches)
@@ -139,8 +148,10 @@
   // art size in source pixels after trim + rotation
   const artPx = d => (d.rot % 2 ? [d.trim.h, d.trim.w] : [d.trim.w, d.trim.h]);
   const aspect = d => { const [w, h] = artPx(d); return h / w; };
-  const dpiOf = d => d.vector ? Infinity : Math.min(artPx(d)[0] / d.wIn, artPx(d)[1] / d.hIn);
+  // rounded so float noise (299.9999) never downgrades a 300 DPI design
+  const dpiOf = d => d.vector ? Infinity : Math.round(Math.min(artPx(d)[0] / d.wIn, artPx(d)[1] / d.hIn));
   const usable = () => [SHEET_W - 2 * state.margin, SHEET_H - 2 * state.margin];
+  const stretched = d => !d.lock && Math.abs(d.hIn / d.wIn - aspect(d)) > 0.01 * aspect(d);
 
   // Does the design fit inside 22 × 39 in minus the margins (rotated if allowed)?
   function fitOf(d) {
@@ -154,20 +165,50 @@
     const s = Math.max(s1, s2);
     return { fits, maxW: Math.floor(w * s * 100) / 100, maxH: Math.floor(h * s * 100) / 100 };
   }
+  // ok | review (150–299 DPI, no transparency, stretched) | bad (< 150 DPI or doesn't fit)
+  function statusOf(d) {
+    const dpi = dpiOf(d);
+    if (!fitOf(d).fits || dpi < 150) return "bad";
+    if (dpi < 300 || d.opaque || stretched(d)) return "review";
+    return "ok";
+  }
+  const dpiLabel = d => {
+    const dpi = dpiOf(d);
+    if (!isFinite(dpi)) return { cls: "ok", txt: "Vector ✓" };
+    const n = dpi;
+    return n >= 300 ? { cls: "ok", txt: `${n} DPI ✓` } : n >= 150 ? { cls: "review", txt: `${n} DPI · review` } : { cls: "bad", txt: `${n} DPI · needs a fix` };
+  };
+
+  // how many copies of one design fit on a single sheet
+  function perSheet(d) {
+    const g = state.gap, [UW, UH] = usable(), bw = UW + g, bh = UH + g, w = d.wIn + g, h = d.hIn + g;
+    const cap = Math.min(COPIES_MAX, Math.floor(bw * bh / (w * h)) + 1);
+    const items = Array.from({ length: cap }, () => ({ w, h, ref: d }));
+    return Math.max(...["bottom", "bssf"].map(rule => runBin(items, bw, bh, state.rotate, rule).placed.length));
+  }
+  const repeatDesign = () => state.designs.find(d => d.id === state.repeatId) || state.designs[0] || null;
 
   function compute() {
     const m = state.margin, g = state.gap, [UW, UH] = usable();
+    const repeat = state.mode === "repeat", rd = repeat ? repeatDesign() : null;
+    const list = repeat ? (rd ? [rd] : []) : state.designs;
     const items = [], oversize = [];
-    for (const d of state.designs) {
+    let per = 0;
+    for (const d of list) {
       if (!fitOf(d).fits) { oversize.push(d); continue; }
-      for (let q = 0; q < d.qty; q++) items.push({ w: d.wIn + g, h: d.hIn + g, ref: d });
+      let n = d.qty;
+      if (repeat) {
+        per = perSheet(d);
+        n = state.repeatBy === "sheets" ? Math.min(COPIES_MAX, per * state.repSheets) : state.repCopies;
+      }
+      for (let q = 0; q < n; q++) items.push({ w: d.wIn + g, h: d.hIn + g, ref: d });
     }
     const t0 = performance.now();
-    const sheets = packSheets(items, UW + g, UH + g, state.rotate);
+    const sheets = packSheets(items, UW + g, UH + g, state.rotate, state.together && !repeat);
     const prints = sheets.reduce((s, p) => s + p.length, 0);
     const area = sheets.reduce((s, sh) => s + sh.reduce((a, p) => a + (p.w - g) * (p.h - g), 0), 0);
     return {
-      m, g, sheets, oversize, prints, ms: performance.now() - t0,
+      m, g, sheets, oversize, prints, per, ms: performance.now() - t0,
       eff: sheets.length ? area / (sheets.length * SHEET_W * SHEET_H) * 100 : 0,
       price: sheets.length * PRICE_M
     };
@@ -199,10 +240,10 @@
   }
   // default print width: 10 in or the art's 300-DPI width, whichever is smaller
   const defaultWidth = d => clamp(d.vector ? 10 : Math.min(10, artPx(d)[0] / DPI), SIZE_MIN, W_MAX);
-  async function addFile(file, name, widthIn) {
+  async function addFile(file, name, widthIn, url = URL.createObjectURL(file)) {
     const type = file.type || "";
-    if (!TYPES.test(type) && !EXT.test(name || "")) { toast(`${name || "File"} skipped — use PNG, JPG, WEBP or SVG`); return false; }
-    const url = URL.createObjectURL(file);
+    if (!TYPES.test(type) && !EXT.test(name || "")) { URL.revokeObjectURL(url); toast(`${name || "File"} skipped — use PNG, JPG, WEBP or SVG`); return false; }
+    if (file.size > MAX_BYTES) { URL.revokeObjectURL(url); toast(`${name || "File"} skipped — files can be up to 100 MB`); return false; }
     try {
       const img = await loadImage(url);
       const vector = /svg/i.test(type) || /\.svg$/i.test(name || "");
@@ -218,6 +259,7 @@
       d.hIn = d.wIn * aspect(d);
       state.designs.push(d);
       state.activeId = d.id;
+      if (!state.repeatId) state.repeatId = d.id;
       return true;
     } catch {
       URL.revokeObjectURL(url);
@@ -225,94 +267,233 @@
       return false;
     }
   }
+  const upEl = $("#gsUpload");
   async function addFiles(list) {
     const files = Array.from(list || []);
     if (!files.length) return;
     let n = 0;
-    for (const f of files) if (await addFile(f, f.name)) n++;
-    if (n) { renderList(); schedule(0); }
+    upEl.hidden = false;
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i], url = URL.createObjectURL(f);
+      $("#gsUpThumb").src = url;
+      $("#gsUpCount").textContent = `${i + 1} / ${files.length}`;
+      $("#gsUpBar").style.width = `${(i + 1) / files.length * 100}%`;
+      await new Promise(r => requestAnimationFrame(r)); // let the overlay paint
+      if (await addFile(f, f.name, 0, url)) n++;
+    }
+    upEl.hidden = true; $("#gsUpThumb").removeAttribute("src");
+    if (n) { renderList(); schedule(0); toast(`${plural(n, "image")} added to your sheet`); }
   }
 
   /* ======================================================
-     UI: design list
+     UI: design cards
      ====================================================== */
   const listEl = $("#gsList");
-  function rowHTML(d) {
-    return `<li class="gs-row${d.id === state.activeId ? " is-active" : ""}" data-id="${d.id}">
-      <img class="gs-row__thumb" src="${d.url}" alt="">
-      <span class="gs-row__name" title="${esc(d.name)}">${esc(d.name)}</span>
-      <span class="gs-row__acts">
-        <button type="button" data-act="dup" aria-label="Duplicate ${esc(d.name)}" title="Duplicate">${I("copy")}</button>
-        <button type="button" class="rm" data-act="rm" aria-label="Remove ${esc(d.name)}" title="Remove">${I("trash")}</button>
-      </span>
-      <div class="gs-row__ctrls">
-        <label class="gs-w">W <input type="number" data-f="w" min="${SIZE_MIN}" max="${W_MAX}" step="0.01" value="${f2(d.wIn)}" inputmode="decimal" aria-label="Print width in inches for ${esc(d.name)}"> in</label>
-        <span class="gs-dim" data-dim>× ${inch(d.hIn)} H</span>
-        <div class="qty" role="group" aria-label="Copies of ${esc(d.name)}">
-          <button type="button" data-act="minus" aria-label="Fewer copies">−</button>
-          <input type="number" data-f="q" min="1" max="500" value="${d.qty}" inputmode="numeric" aria-label="Copies">
-          <button type="button" data-act="plus" aria-label="More copies">+</button>
+  function cardHTML(d) {
+    const nm = esc(d.name);
+    return `<li class="gs-card${d.id === state.activeId ? " is-active" : ""}" data-id="${d.id}">
+      <div class="gs-card__thumb"><canvas data-thumb aria-hidden="true"></canvas><span class="gs-card__x" data-x hidden></span></div>
+      <div class="gs-card__body">
+        <div class="gs-card__head">
+          <span class="gs-card__name" title="${nm}">${nm}</span>
+          <span class="gs-dpi" data-dpi></span>
+          <details class="gs-menu">
+            <summary class="gs-icon-btn gs-icon-btn--txt" aria-label="Edit ${nm}">Edit</summary>
+            <div class="gs-menu__list">
+              <button type="button" data-act="trim">Auto-trim transparent edges</button>
+              <button type="button" data-act="flipH">Flip horizontal</button>
+              <button type="button" data-act="flipV">Flip vertical</button>
+              <button type="button" data-act="rot">Rotate 90°</button>
+              <a href="halftone.html" target="_blank" rel="noopener">Halftone…</a>
+            </div>
+          </details>
+          <button type="button" class="gs-icon-btn rm" data-act="rm" aria-label="Delete ${nm}" title="Delete">${I("trash")}</button>
         </div>
+        <div class="gs-card__size">
+          <label class="gs-w"><span>Width</span><input type="number" data-f="w" min="${SIZE_MIN}" max="${W_MAX}" step="0.01" inputmode="decimal"><span>in</span></label>
+          <label class="gs-w"><span>Height</span><input type="number" data-f="h" min="${SIZE_MIN}" max="${H_MAX}" step="0.01" inputmode="decimal"><span>in</span></label>
+        </div>
+        <label class="gs-lock"><input type="checkbox" data-f="lock"${d.lock ? " checked" : ""}> Lock aspect ratio</label>
+        <p class="gs-card__orig" data-orig></p>
+        <div class="gs-card__copies">
+          <span>Copies on sheet</span>
+          <div class="qty" role="group" aria-label="Copies of ${nm}">
+            <button type="button" data-act="minus" aria-label="Fewer copies">−</button>
+            <input type="number" data-f="q" min="1" max="${COPIES_MAX}" inputmode="numeric" aria-label="Copies">
+            <button type="button" data-act="plus" aria-label="More copies">+</button>
+          </div>
+        </div>
+        <p class="gs-card__warn" data-stretch hidden>Aspect ratio unlocked — the art will stretch.</p>
+        ${d.opaque ? `<p class="gs-card__warn">No transparent background — DTF prints every non-transparent pixel.</p>` : ""}
+        <p class="gs-card__warn gs-card__warn--bad" data-lowres hidden>Low resolution for this size — print it smaller or upload a larger file.</p>
+        <p class="gs-card__warn gs-card__warn--bad" data-over hidden><span></span> <button type="button" class="link-arrow" data-act="fit">Use max size</button></p>
       </div>
-      ${d.opaque ? `<p class="gs-row__warn">No transparent background — DTF prints every non-transparent pixel</p>` : ""}
-      <p class="gs-row__warn gs-row__warn--bad" data-over hidden></p>
     </li>`;
   }
   function renderList() {
-    listEl.innerHTML = state.designs.map(rowHTML).join("");
+    listEl.innerHTML = state.designs.map(cardHTML).join("");
     $("#gsListEmpty").hidden = state.designs.length > 0;
+    renderRepeatPick();
+    refreshCards();
   }
-  const findD = el => { const li = el.closest(".gs-row"); return li && state.designs.find(d => d.id === li.dataset.id); };
+  const cardOf = d => listEl.querySelector(`.gs-card[data-id="${d.id}"]`);
+  function drawThumb(cv, d) {
+    const S = 88, dpr = Math.min(window.devicePixelRatio || 1, 2), r = d.hIn / d.wIn;
+    const w = r > 1 ? S / r : S, h = r > 1 ? S : S * r;
+    cv.width = cv.height = Math.round(S * dpr);
+    const x = cv.getContext("2d");
+    x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, S, S); x.imageSmoothingQuality = "high";
+    drawArt(x, d, (S - w) / 2, (S - h) / 2, w, h, false);
+  }
+  const setVal = (inp, v) => { if (document.activeElement !== inp) inp.value = v; };
+  function refreshCard(d, counts) {
+    const li = cardOf(d); if (!li) return;
+    const st = statusOf(d), f = fitOf(d), dl = dpiLabel(d), n = counts.get(d) || 0;
+    li.classList.toggle("is-bad", st === "bad");
+    li.classList.toggle("is-review", st === "review");
+    setVal(li.querySelector('[data-f="w"]'), f2(d.wIn));
+    setVal(li.querySelector('[data-f="h"]'), f2(d.hIn));
+    setVal(li.querySelector('[data-f="q"]'), d.qty);
+    li.querySelector('[data-f="lock"]').checked = d.lock;
+    const b = li.querySelector("[data-dpi]"); b.className = `gs-dpi gs-dpi--${dl.cls}`; b.textContent = dl.txt;
+    li.querySelector("[data-orig]").textContent = d.vector ? "Original: vector (SVG)" : `Original: ${d.pw} × ${d.ph} px`;
+    const x = li.querySelector("[data-x]"); x.hidden = n < 2; x.textContent = `×${n}`;
+    li.querySelector("[data-stretch]").hidden = !stretched(d);
+    li.querySelector("[data-lowres]").hidden = !(dpiOf(d) < 150);
+    const over = li.querySelector("[data-over]");
+    over.hidden = f.fits;
+    if (!f.fits) over.querySelector("span").textContent = d.wIn < SIZE_MIN - EPS || d.hIn < SIZE_MIN - EPS
+      ? `Too small — the minimum print size is ${inch(SIZE_MIN)}.`
+      : `Too big for ${SHEET_W} × ${SHEET_H} in — the largest that fits is ${f2(f.maxW)} × ${f2(f.maxH)} in.`;
+    over.querySelector("[data-act=fit]").hidden = d.wIn < SIZE_MIN - EPS || d.hIn < SIZE_MIN - EPS;
+    drawThumb(li.querySelector("[data-thumb]"), d);
+  }
+  function refreshCards() {
+    const L = state.layout, counts = new Map();
+    if (L) L.sheets.forEach(sh => sh.forEach(p => counts.set(p.ref, (counts.get(p.ref) || 0) + 1)));
+    state.designs.forEach(d => refreshCard(d, counts));
+    listEl.dataset.mode = state.mode;
+    listEl.querySelectorAll(".gs-card").forEach(li => li.classList.toggle("is-repeat", li.dataset.id === (repeatDesign() || {}).id));
+    renderIssues();
+  }
+  function renderIssues() {
+    const shown = state.mode === "repeat" ? [repeatDesign()].filter(Boolean) : state.designs;
+    const st = shown.map(statusOf);
+    const bad = st.filter(s => s === "bad").length, rev = st.filter(s => s === "review").length;
+    $("#gsReady").textContent = `· ${shown.filter(d => fitOf(d).fits).length} ready for layout`;
+    const cb = $('[data-jump="is-bad"]'), cr = $('[data-jump="is-review"]');
+    cb.hidden = !bad; cb.textContent = `⚠ ${bad} need${bad === 1 ? "s" : ""} a fix`;
+    cr.hidden = !rev; cr.textContent = `◉ ${rev} to review`;
+  }
+  $("#gsIssues").addEventListener("click", e => {
+    const c = e.target.closest("[data-jump]"); if (!c) return;
+    const li = Array.from(listEl.querySelectorAll(`.gs-card.${c.dataset.jump}`)).find(x => x.offsetParent); if (!li) return;
+    li.scrollIntoView({ behavior: T9.reduceMotion ? "auto" : "smooth", block: "center" });
+    li.classList.remove("is-flash"); void li.offsetWidth; li.classList.add("is-flash");
+    li.querySelector("input")?.focus({ preventScroll: true });
+  });
+
+  const findD = el => { const li = el.closest(".gs-card"); return li && state.designs.find(d => d.id === li.dataset.id); };
   function setActive(id) {
     state.activeId = id;
-    listEl.querySelectorAll(".gs-row").forEach(li => li.classList.toggle("is-active", li.dataset.id === id));
+    listEl.querySelectorAll(".gs-card").forEach(li => li.classList.toggle("is-active", li.dataset.id === id));
   }
-  function updateRowDim(d) {
-    const li = listEl.querySelector(`.gs-row[data-id="${d.id}"]`);
-    if (li) li.querySelector("[data-dim]").textContent = `× ${inch(d.hIn)} H`;
+  function setWidth(d, w) { d.wIn = w; if (d.lock) d.hIn = w * aspect(d); }
+  function setHeight(d, h) { d.hIn = h; if (d.lock) d.wIn = h / aspect(d); }
+  // keep the printed scale (DPI) when the art's pixel box changes
+  function rescale(d, before) {
+    const [w0, h0] = before, [w1, h1] = artPx(d);
+    d.wIn *= w1 / w0; d.hIn = d.lock ? d.wIn * aspect(d) : d.hIn * h1 / h0;
   }
-  function setWidth(d, w) { d.wIn = w; if (d.lock) d.hIn = w * aspect(d); updateRowDim(d); }
+  function trimDesign(d) {
+    if (d.vector && !d.img.naturalWidth) { toast("This SVG has no fixed size, so it can't be trimmed"); return false; }
+    const k = Math.min(1, 2048 / Math.max(d.pw, d.ph));
+    const w = Math.max(1, Math.round(d.pw * k)), h = Math.max(1, Math.round(d.ph * k));
+    let a;
+    try {
+      const c = document.createElement("canvas"); c.width = w; c.height = h;
+      const x = c.getContext("2d", { willReadFrequently: true });
+      x.drawImage(d.img, 0, 0, w, h);
+      a = x.getImageData(0, 0, w, h).data;
+    } catch { toast("Couldn't read this image to trim it"); return false; }
+    let x0 = w, y0 = h, x1 = -1, y1 = -1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (a[(y * w + x) * 4 + 3] > 8) {
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+    if (x1 < 0) { toast("This image is fully transparent"); return false; }
+    // map back to full-size pixels, rounding outwards so no art is cut
+    const t = { x: Math.max(0, Math.floor(x0 / k)), y: Math.max(0, Math.floor(y0 / k)) };
+    t.w = Math.min(d.pw, Math.ceil((x1 + 1) / k)) - t.x; t.h = Math.min(d.ph, Math.ceil((y1 + 1) / k)) - t.y;
+    if (t.w >= d.trim.w - 1 && t.h >= d.trim.h - 1 && t.x <= d.trim.x + 1 && t.y <= d.trim.y + 1) { toast("No transparent edges to trim"); return false; }
+    const before = artPx(d);
+    d.trim = t; rescale(d, before);
+    toast(`Trimmed ${d.name} to ${f2(d.wIn)} × ${f2(d.hIn)} in`);
+    return true;
+  }
 
-  listEl.addEventListener("focusin", e => { const d = findD(e.target); if (d) setActive(d.id); });
+  listEl.addEventListener("focusin", e => {
+    const d = findD(e.target); if (!d) return;
+    setActive(d.id);
+    if (e.target.dataset.f === "q") d._qBefore = d.qty;
+  });
   listEl.addEventListener("pointerdown", e => { const d = findD(e.target); if (d) setActive(d.id); });
   listEl.addEventListener("click", e => {
     const b = e.target.closest("[data-act]"); if (!b) return;
     const d = findD(b); if (!d) return;
     const act = b.dataset.act;
+    b.closest("details")?.removeAttribute("open");
     if (act === "minus" || act === "plus") {
-      d.qty = Math.min(500, Math.max(1, d.qty + (act === "plus" ? 1 : -1)));
-      b.parentElement.querySelector("input").value = d.qty;
+      d.qty = clamp(d.qty + (act === "plus" ? 1 : -1), 1, COPIES_MAX);
       schedule();
-    } else if (act === "dup") {
-      const c = { ...d, id: "d" + (++uid), trim: { ...d.trim } };
-      state.designs.splice(state.designs.indexOf(d) + 1, 0, c);
-      state.activeId = c.id; renderList(); schedule(0);
-      listEl.querySelector(`.gs-row[data-id="${c.id}"] [data-act="dup"]`)?.focus();
     } else if (act === "rm") {
       const i = state.designs.indexOf(d);
       state.designs.splice(i, 1);
       if (!state.designs.some(x => x.url === d.url)) URL.revokeObjectURL(d.url);
       const next = state.designs[Math.min(i, state.designs.length - 1)];
       state.activeId = next ? next.id : null;
+      if (state.repeatId === d.id) state.repeatId = next ? next.id : null;
       renderList(); schedule(0);
-      (next ? listEl.querySelector(`.gs-row[data-id="${next.id}"] [data-act="rm"]`) : $("#gsDrop"))?.focus();
-    }
+      (next ? cardOf(next)?.querySelector('[data-act="rm"]') : $("#gsDrop"))?.focus();
+      return;
+    } else if (act === "trim") { if (!trimDesign(d)) return; }
+    else if (act === "flipH") d.flipH = !d.flipH;
+    else if (act === "flipV") d.flipV = !d.flipV;
+    else if (act === "rot") { d.rot = (d.rot + 1) % 4; [d.wIn, d.hIn] = [d.hIn, d.wIn]; }
+    else if (act === "fit") { const f = fitOf(d); d.wIn = f.maxW; d.hIn = f.maxH; }
+    refreshCards(); schedule(0);
   });
   listEl.addEventListener("input", e => {
     const inp = e.target.closest("[data-f]"); if (!inp) return;
     const d = findD(inp); if (!d) return;
+    const f = inp.dataset.f;
+    if (f === "lock") { d.lock = inp.checked; if (d.lock) d.hIn = d.wIn * aspect(d); refreshCards(); schedule(0); return; }
     const v = parseFloat(inp.value);
     if (!(v > 0)) return;
     // sizes are kept as typed so an out-of-range size can be flagged (not silently changed)
-    if (inp.dataset.f === "w") setWidth(d, v);
-    else d.qty = Math.min(500, Math.max(1, Math.round(v)));
-    schedule();
+    if (f === "w") setWidth(d, v);
+    else if (f === "h") setHeight(d, v);
+    else d.qty = clamp(Math.round(v), 1, COPIES_MAX);
+    refreshCards(); schedule();
   });
   listEl.addEventListener("change", e => { // normalise displayed value on blur/enter
     const inp = e.target.closest("[data-f]"); if (!inp) return;
     const d = findD(inp); if (!d) return;
-    if (inp.dataset.f === "w") { if (d.wIn < SIZE_MIN) { setWidth(d, SIZE_MIN); schedule(0); } inp.value = f2(d.wIn); }
-    else inp.value = d.qty;
+    const f = inp.dataset.f;
+    if (f === "w" && d.wIn < SIZE_MIN) setWidth(d, SIZE_MIN);
+    if (f === "h" && d.hIn < SIZE_MIN) setHeight(d, SIZE_MIN);
+    if (f === "q" && d.qty - (d._qBefore || d.qty) > 1) toast(`${d.qty - d._qBefore} copies added`);
+    if (f === "q") d._qBefore = d.qty;
+    if (f === "w" || f === "h") inp.value = f2(f === "w" ? d.wIn : d.hIn);
+    refreshCards(); schedule(0);
+  });
+  // edit menus: one open at a time, close on outside click / Esc
+  listEl.addEventListener("toggle", e => {
+    if (e.target.matches?.("details[open]")) listEl.querySelectorAll("details[open]").forEach(x => { if (x !== e.target) x.removeAttribute("open"); });
+  }, true);
+  document.addEventListener("click", e => { if (!e.target.closest(".gs-menu")) listEl.querySelectorAll("details[open]").forEach(x => x.removeAttribute("open")); });
+  listEl.addEventListener("keydown", e => {
+    const m = e.target.closest("details[open]");
+    if (e.key === "Escape" && m) { m.removeAttribute("open"); m.querySelector("summary").focus(); }
   });
 
   /* Size guide */
@@ -323,18 +504,64 @@
   });
   guide.addEventListener("click", e => {
     const c = e.target.closest("[data-size]"); if (!c) return;
-    const d = state.designs.find(x => x.id === state.activeId) || state.designs[0];
+    const d = state.mode === "repeat" ? repeatDesign() : (state.designs.find(x => x.id === state.activeId) || state.designs[0]);
     if (!d) { toast("Upload a design first"); return; }
     setWidth(d, +c.dataset.size);
-    const inp = listEl.querySelector(`.gs-row[data-id="${d.id}"] [data-f="w"]`);
-    if (inp) inp.value = f2(d.wIn);
-    schedule(0);
+    refreshCards(); schedule(0);
     toast(`${d.name} set to ${inch(d.wIn)} wide`);
   });
 
   /* ======================================================
-     UI: upload, layout
+     UI: mode, repeat, upload, layout
      ====================================================== */
+  function setMode(mode) {
+    state.mode = mode;
+    $("#gsModeSeg").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.mode === mode)));
+    $("#gsTitle").textContent = mode === "repeat" ? "Create Your Repeat Print" : "Create Your Gang Sheet";
+    $("#gsRepeatPanel").hidden = mode !== "repeat";
+    $("#gsTogetherWrap").hidden = mode === "repeat";
+    renderRepeatPick(); refreshCards(); schedule(0);
+  }
+  $("#gsModeSeg").addEventListener("click", e => { const b = e.target.closest("[data-mode]"); if (b) setMode(b.dataset.mode); });
+
+  function renderRepeatPick() {
+    const sel = $("#gsRepeatPick"), rd = repeatDesign();
+    $("#gsRepeatPickWrap").hidden = state.designs.length < 2;
+    sel.innerHTML = state.designs.map(d => `<option value="${d.id}"${rd === d ? " selected" : ""}>${esc(d.name)}</option>`).join("");
+  }
+  $("#gsRepeatPick").addEventListener("change", e => { state.repeatId = e.target.value; refreshCards(); schedule(0); });
+  const repN = $("#gsRepeatN");
+  function syncRepeat() {
+    const sheets = state.repeatBy === "sheets";
+    $("#gsRepeatBy").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.by === state.repeatBy)));
+    $("#gsRepeatNLabel").textContent = sheets ? "Sheets to fill" : "Copies";
+    repN.max = sheets ? 50 : COPIES_MAX;
+    setVal(repN, sheets ? state.repSheets : state.repCopies);
+  }
+  function setRepeatN(v, announce) {
+    if (!(v >= 1)) return;
+    if (state.repeatBy === "sheets") state.repSheets = clamp(Math.round(v), 1, 50); else state.repCopies = clamp(Math.round(v), 1, COPIES_MAX);
+    syncRepeat(); schedule(announce ? 0 : 140);
+    if (announce) announceRepeat = true;
+  }
+  let announceRepeat = false;
+  $("#gsRepeatBy").addEventListener("click", e => { const b = e.target.closest("[data-by]"); if (!b) return; state.repeatBy = b.dataset.by; syncRepeat(); announceRepeat = true; schedule(0); });
+  $("#gsRepeatPanel").addEventListener("click", e => { const b = e.target.closest("[data-rep]"); if (b) setRepeatN((+repN.value || 0) + +b.dataset.rep, true); });
+  repN.addEventListener("input", () => setRepeatN(parseFloat(repN.value), false));
+  repN.addEventListener("change", () => { setRepeatN(parseFloat(repN.value) || 1, true); repN.value = state.repeatBy === "sheets" ? state.repSheets : state.repCopies; });
+  function renderRepeatNote(L) {
+    const note = $("#gsRepeatNote"), rd = repeatDesign();
+    if (state.mode !== "repeat") return;
+    if (!rd) { note.textContent = "Upload the design you want to repeat."; return; }
+    if (!L || !L.prints) { note.textContent = "This design doesn't fit on the sheet at its current size."; return; }
+    const n = L.sheets.length;
+    note.textContent = state.repeatBy === "sheets"
+      ? `${L.per} copies fit per sheet at ${f2(rd.wIn)} × ${f2(rd.hIn)} in — ${plural(L.prints, "copy", "copies")} fill ${plural(n, "sheet")}.`
+      : `${plural(L.prints, "copy", "copies")} on ${plural(n, "sheet")} · up to ${L.per} fit per sheet.`;
+    if (announceRepeat && state.repeatBy === "sheets") toast(`${L.prints} copies added — fills ${plural(n, "sheet")}`);
+    announceRepeat = false;
+  }
+
   const fileInp = $("#gsFile"), drop = $("#gsDrop");
   fileInp.addEventListener("change", () => { addFiles(fileInp.files).then(() => { fileInp.value = ""; }); });
   ["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("is-over"); }));
@@ -345,12 +572,13 @@
 
   const numIn = (id, key, max) => {
     const el = $(id);
-    el.addEventListener("input", () => { const v = parseFloat(el.value); if (v >= 0) { state[key] = clamp(v, 0, max); schedule(); } });
+    el.addEventListener("input", () => { const v = parseFloat(el.value); if (v >= 0) { state[key] = clamp(v, 0, max); refreshCards(); schedule(); } });
     el.addEventListener("change", () => { el.value = f2(state[key]); });
   };
   numIn("#gsMargin", "margin", MARGIN_MAX);
   numIn("#gsGap", "gap", GAP_MAX);
-  $("#gsRotate").addEventListener("change", e => { state.rotate = e.target.checked; schedule(0); });
+  $("#gsRotate").addEventListener("change", e => { state.rotate = e.target.checked; refreshCards(); schedule(0); });
+  $("#gsTogether").addEventListener("change", e => { state.together = e.target.checked; schedule(0); });
   $("#gsBgSeg").addEventListener("click", e => {
     const b = e.target.closest("[data-bg]"); if (!b) return;
     state.bg = b.dataset.bg;
@@ -367,44 +595,36 @@
     timer = setTimeout(update, delay);
   }
   function update() {
+    clearTimeout(timer);
     const L = state.layout = state.designs.length ? compute() : null;
-    renderSummary(L); draw(); renderOverflow(L); renderSteps(L);
+    renderSummary(L); draw(); renderOverflow(L); renderSteps(L); refreshCards(); renderRepeatNote(L);
     const ok = !!(L && L.prints);
-    ["#gsAdd", "#gsWA", "#gsDL"].forEach(s => { $(s).disabled = !ok; });
+    ["#gsAdd", "#gsWA", "#gsDL", "#gsPrev"].forEach(s => { $(s).disabled = !ok; });
+    $("#gsGen").disabled = !state.designs.length;
   }
 
-  const sheetsTxt = n => `${n} sheet${n === 1 ? "" : "s"}`;
   function renderSummary(L) {
     const row = (k, v, cls = "") => `<div class="${cls}"><dt>${k}</dt><dd>${v}</dd></div>`;
-    const n = L ? L.sheets.length : 0;
+    const n = L ? L.sheets.length : 0, prints = L ? L.prints : 0;
     $("#gsSummary").innerHTML =
       row("Sheet size", `${SHEET_W} × ${SHEET_H} in <span class="muted" style="font-weight:500">(portrait)</span>`) +
       row("Sheets", n || "—") +
-      row("Prints", L ? L.prints : 0) +
+      row("Copies", prints) +
       row("Fill efficiency", n ? `${Math.round(L.eff)}%` : "—") +
       row("Estimated price", money(n * PRICE_M), "gs-price");
     $("#gsPriceNote").textContent = n
-      ? `Estimated price ${money(L.price)} · ${sheetsTxt(n)} · from ${money(PRICE_M)} per metre — final price confirmed on WhatsApp.`
+      ? `Estimated price ${money(L.price)} · ${plural(n, "sheet")} · from ${money(PRICE_M)} per metre — final price confirmed on WhatsApp.`
       : `From ${money(PRICE_M)} per metre — each 22 × 39 in sheet is billed as 1 metre. Final price confirmed on WhatsApp.`;
-    $("#gsMeta").textContent = n ? `${sheetsTxt(n)} · ${SHEET_W} × ${SHEET_H} in · ${L.prints} prints` : "";
+    $("#gsBig").textContent = `${plural(n, "sheet")} · ${SHEET_W} × ${SHEET_H} in`;
+    $("#gsTotal").textContent = `${plural(prints, "copy", "copies")} · ${plural(n, "sheet")}`;
+    $("#gsMeta").textContent = n ? `Tap a sheet to see it big · ${plural(prints, "print")} · ${Math.round(L.eff)}% of the film used` : "";
   }
   function renderOverflow(L) {
     const box = $("#gsOverflow");
-    listEl.querySelectorAll("[data-over]").forEach(p => { p.hidden = true; });
-    listEl.querySelectorAll(".gs-row").forEach(li => li.classList.remove("is-bad"));
     if (!L || !L.oversize.length) { box.hidden = true; return; }
     const n = L.oversize.length;
     box.hidden = false;
     box.textContent = `${n === 1 ? "1 design doesn't" : n + " designs don't"} fit on a ${SHEET_W} × ${SHEET_H} in sheet${state.rotate ? " even rotated" : ""} and ${n === 1 ? "isn't" : "aren't"} on the layout.`;
-    L.oversize.forEach(d => {
-      const li = listEl.querySelector(`.gs-row[data-id="${d.id}"]`); if (!li) return;
-      const f = fitOf(d), p = li.querySelector("[data-over]");
-      li.classList.add("is-bad");
-      p.hidden = false;
-      p.textContent = d.wIn < SIZE_MIN || d.hIn < SIZE_MIN
-        ? `Too small — the minimum print size is ${inch(SIZE_MIN)}.`
-        : `Too big for ${SHEET_W} × ${SHEET_H} in — the largest that fits is ${f2(f.maxW)} × ${f2(f.maxH)} in.`;
-    });
   }
   function renderSteps(L) {
     const s = !state.designs.length ? 1 : (L && L.prints ? 3 : 2);
@@ -469,9 +689,9 @@
     }
     ctx.stroke(); ctx.restore();
   }
-  function drawSheet(cv, L, sheet, cssW) {
+  function drawSheet(cv, L, sheet, cssW, maxDpr = 2) {
     const s = (cssW - GUT) / SHEET_W, cssH = GUT + SHEET_H * s;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
     cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr);
     cv.style.width = cssW + "px"; cv.style.height = cssH + "px";
     const ctx = cv.getContext("2d");
@@ -491,6 +711,7 @@
     ctx.strokeStyle = dark ? "#0A0A0A" : "rgba(10,10,10,.35)"; ctx.lineWidth = 1;
     ctx.strokeRect(ox + .5, oy + .5, sw - 1, sh - 1);
     ruler(ctx, s, ox, oy);
+    return { cssW, cssH };
   }
   function draw() {
     const L = state.layout;
@@ -499,17 +720,104 @@
     if (empty) { sheetsEl.innerHTML = ""; return; }
     const n = L.sheets.length;
     if (sheetsEl.children.length !== n) {
-      sheetsEl.innerHTML = L.sheets.map((_, i) => `<figure class="gs-sheet"><canvas role="img" aria-label="Sheet ${i + 1} of ${n}"></canvas><figcaption>Sheet ${i + 1}</figcaption></figure>`).join("");
+      sheetsEl.innerHTML = L.sheets.map((_, i) => `<figure class="gs-sheet" data-sheet="${i}" tabindex="0" role="button" aria-label="Sheet ${i + 1} of ${n} — open large"><canvas aria-hidden="true"></canvas><figcaption>Sheet ${i + 1}</figcaption></figure>`).join("");
     }
     // side by side; each sheet keeps a readable size and the row wraps when space runs out
     const avail = Math.max(160, sheetsEl.clientWidth);
-    const per = n === 1 ? Math.min(avail, 420) : Math.min(320, Math.max(150, (avail - 16 * (Math.min(n, 3) - 1)) / Math.min(n, 3)));
+    const cols = Math.min(n, avail < 420 ? 2 : 3);
+    const per = n === 1 ? Math.min(avail, 420) : Math.min(320, Math.max(110, (avail - 16 * (cols - 1)) / cols));
     sheetsEl.querySelectorAll("canvas").forEach((cv, i) => drawSheet(cv, L, L.sheets[i], Math.floor(per)));
+    if (!lb.hidden) renderLb();
   }
   if ("ResizeObserver" in window) {
     let raf = 0;
     new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); }).observe(wrap);
   }
+  sheetsEl.addEventListener("click", e => { const f = e.target.closest("[data-sheet]"); if (f) openLb(+f.dataset.sheet); });
+  sheetsEl.addEventListener("keydown", e => {
+    const f = e.target.closest("[data-sheet]");
+    if (f && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openLb(+f.dataset.sheet); }
+  });
+
+  /* ======================================================
+     Sheet lightbox: zoom (wheel / pinch / buttons) and pan (drag)
+     ====================================================== */
+  const lb = $("#gsLb"), lbStage = $("#gsLbStage"), lbCv = $("#gsLbCanvas");
+  const view = { i: 0, z: 1, fit: 1, tx: 0, ty: 0, w: 0, h: 0, opener: null };
+  const applyView = () => { lbCv.style.transform = `translate(${view.tx}px, ${view.ty}px) scale(${view.z})`; };
+  function fitView() {
+    const r = lbStage.getBoundingClientRect();
+    view.fit = view.z = Math.min((r.width - 24) / view.w, (r.height - 24) / view.h);
+    view.tx = (r.width - view.w * view.z) / 2; view.ty = (r.height - view.h * view.z) / 2;
+    applyView();
+  }
+  function zoomAt(f, cx, cy) {
+    const nz = clamp(view.z * f, view.fit, Math.max(view.fit * 10, 4));
+    view.tx = cx - (cx - view.tx) * nz / view.z; view.ty = cy - (cy - view.ty) * nz / view.z; view.z = nz;
+    applyView();
+  }
+  function renderLb() {
+    const L = state.layout;
+    if (!L || !L.prints) { closeLb(); return; }
+    view.i = clamp(view.i, 0, L.sheets.length - 1);
+    const n = L.sheets.length, sz = drawSheet(lbCv, L, L.sheets[view.i], GUT + SHEET_W * 40, 3);
+    view.w = sz.cssW; view.h = sz.cssH;
+    $("#gsLbTitle").textContent = `Sheet ${view.i + 1} of ${n} · ${SHEET_W} × ${SHEET_H} in`;
+    lb.querySelector('[data-lb="prev"]').disabled = view.i === 0;
+    lb.querySelector('[data-lb="next"]').disabled = view.i === n - 1;
+    fitView();
+  }
+  function openLb(i) {
+    if (!state.layout || !state.layout.prints) return;
+    view.i = i; view.opener = document.activeElement;
+    lb.hidden = false; document.body.style.overflow = "hidden";
+    renderLb();
+    lb.querySelector('[data-lb="close"]').focus();
+  }
+  function closeLb() {
+    if (lb.hidden) return;
+    lb.hidden = true; document.body.style.overflow = "";
+    view.opener?.focus?.();
+  }
+  lb.addEventListener("click", e => {
+    const b = e.target.closest("[data-lb]"); if (!b) return;
+    const r = lbStage.getBoundingClientRect(), act = b.dataset.lb;
+    if (act === "close") closeLb();
+    else if (act === "fit") fitView();
+    else if (act === "in" || act === "out") zoomAt(act === "in" ? 1.4 : 1 / 1.4, r.width / 2, r.height / 2);
+    else { view.i += act === "next" ? 1 : -1; renderLb(); }
+  });
+  lb.addEventListener("keydown", e => {
+    if (e.key === "Escape") { e.preventDefault(); closeLb(); }
+    else if (e.key === "+" || e.key === "=") zoomAt(1.4, lbStage.clientWidth / 2, lbStage.clientHeight / 2);
+    else if (e.key === "-") zoomAt(1 / 1.4, lbStage.clientWidth / 2, lbStage.clientHeight / 2);
+    else if (e.key === "ArrowRight" && view.i < state.layout.sheets.length - 1) { view.i++; renderLb(); }
+    else if (e.key === "ArrowLeft" && view.i > 0) { view.i--; renderLb(); }
+    else if (e.key === "Tab") { // keep focus inside the viewer
+      const f = Array.from(lb.querySelectorAll("button:not([disabled])")), k = f.indexOf(document.activeElement);
+      e.preventDefault(); f[(k + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus();
+    }
+  });
+  lbStage.addEventListener("wheel", e => {
+    e.preventDefault();
+    const r = lbStage.getBoundingClientRect();
+    zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - r.left, e.clientY - r.top);
+  }, { passive: false });
+  const ptrs = new Map();
+  let pinch = 0;
+  lbStage.addEventListener("pointerdown", e => { lbStage.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); pinch = 0; });
+  lbStage.addEventListener("pointermove", e => {
+    const p = ptrs.get(e.pointerId); if (!p) return;
+    if (ptrs.size === 1) { view.tx += e.clientX - p.x; view.ty += e.clientY - p.y; applyView(); }
+    p.x = e.clientX; p.y = e.clientY;
+    if (ptrs.size === 2) {
+      const [a, b] = Array.from(ptrs.values()), dist = Math.hypot(a.x - b.x, a.y - b.y), r = lbStage.getBoundingClientRect();
+      if (pinch) zoomAt(dist / pinch, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top);
+      pinch = dist;
+    }
+  });
+  ["pointerup", "pointercancel"].forEach(t => lbStage.addEventListener(t, e => { ptrs.delete(e.pointerId); pinch = 0; }));
+  addEventListener("resize", () => { if (!lb.hidden) fitView(); });
 
   /* ======================================================
      Print file: 22 × 39 in at 300 DPI = 6600 × 11700 px per sheet.
@@ -589,7 +897,7 @@
     L.sheets.forEach(sh => sh.forEach(p => per.set(p.ref, (per.get(p.ref) || 0) + 1)));
     return per;
   };
-  const summaryLines = L => Array.from(perDesign(L), ([d, n]) => `${d.name} — ${n} ${n === 1 ? "copy" : "copies"} @ ${f2(d.wIn)} × ${f2(d.hIn)} in`);
+  const summaryLines = L => Array.from(perDesign(L), ([d, n]) => `${d.name} — ${plural(n, "copy", "copies")} @ ${f2(d.wIn)} × ${f2(d.hIn)} in`);
   function thumbDataURL(L) {
     const s = 220 / SHEET_H, c = document.createElement("canvas");
     c.width = Math.round(SHEET_W * s); c.height = Math.round(SHEET_H * s);
@@ -636,7 +944,7 @@
     toast(`Rendering ${n === 1 ? "your print file" : n + " print files"} at ${DPI} DPI…`);
     try {
       for (let i = 0; i < n; i++) {
-        const blob = await sheetPNG(L, L.sheets[i], p => { label.textContent = `Sheet ${i + 1} of ${n} · ${Math.round(p * 100)}%`; });
+        const blob = await sheetPNG(L, L.sheets[i], p => { label.textContent = `Sheet ${i + 1}/${n} · ${Math.round(p * 100)}%`; });
         saveBlob(blob, sheetName(i, n));
         await new Promise(r => setTimeout(r, 400)); // let the browser start each download
       }
@@ -648,10 +956,21 @@
     }
   });
 
+  $("#gsPrev").addEventListener("click", () => openLb(0));
+  $("#gsGen").addEventListener("click", () => {
+    update();
+    const L = state.layout, pv = $("#gsPreview");
+    pv.scrollIntoView({ behavior: T9.reduceMotion ? "auto" : "smooth", block: "start" });
+    pv.focus({ preventScroll: true });
+    if (L && L.prints) toast(`Layout ready — ${plural(L.prints, "copy", "copies")} on ${plural(L.sheets.length, "sheet")}`);
+  });
+
+  window.T9_GANG = { packSheets, sheetPNG, state, update }; // exposed for testing
+
   /* ======================================================
      Init (+ hand-off from the Smart Halftone tool)
      ====================================================== */
-  renderList(); update();
+  syncRepeat(); renderList(); update();
   (async () => {
     let data = null;
     try { data = sessionStorage.getItem(IMPORT_KEY); } catch { data = null; }
