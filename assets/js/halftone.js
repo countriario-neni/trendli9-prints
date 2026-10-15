@@ -15,7 +15,7 @@
     file: $("#htFile"), drop: $("#htDrop"), modes: $("#htMode"), autoNote: $("#htAutoNote"),
     canvas: $("#htCanvas"), stage: $("#htStage"), empty: $("#htEmpty"), status: $("#htStatus"),
     shirt: $("#htShirt"), zoom: $("#htZoom"), compare: $("#htCompare"),
-    dl: $("#htDownload"), send: $("#htSend"), reset: $("#htReset"), fileName: $("#htFileName"),
+    dl: $("#htDownload"), send: $("#htSend"), order: $("#htOrder"), reset: $("#htReset"), fileName: $("#htFileName"),
   };
   const sliders = ["tol", "soft", "cell", "range", "angle", "choke"].map((k) => ({
     key: k, input: $("#ht-" + k), out: $("#ht-" + k + "-out"),
@@ -128,7 +128,7 @@
       state.src = imageDataFrom(img, PREVIEW_MAX);
       els.fileName.textContent = `${file.name} · ${img.naturalWidth}×${img.naturalHeight}px`;
       els.empty.hidden = true; els.canvas.hidden = false;
-      els.dl.disabled = els.send.disabled = els.compare.disabled = false;
+      els.dl.disabled = els.send.disabled = els.order.disabled = els.compare.disabled = false;
       draw(state.src);
       schedule(0);
     };
@@ -216,4 +216,23 @@
     catch (_) { toast("Too large — download it instead"); setStatus("Too large to hand off — please download the PNG instead."); return; }
     location.href = "gang-sheet.html";
   }));
+
+  /* Order straight from the tool: WhatsApp opens on the studio's chat with the order
+     text and the halftone (order image + full-size PNG) attached. */
+  els.order.addEventListener("click", () => {
+    if (!state.img || !T9.orderWithFiles) return;
+    const text = [
+      "*New halftone print order — Trendli9 Prints*",
+      `Design: ${state.name} (${state.img.naturalWidth} × ${state.img.naturalHeight} px)`,
+      `Background: ${BG_LABEL[state.picked] || "Auto"} · dot size ${state.cell} px · angle ${state.angle}°`,
+      "Print as: DTF transfer — print size and quantity to confirm",
+      "Please share the price."
+    ].join("\n");
+    T9.orderWithFiles({ text, getFiles: async () => {
+      const c = await renderFull();
+      const blob = await new Promise((r) => c.toBlob(r, "image/png"));
+      const file = new File([blob], `${state.name}-halftone.png`, { type: "image/png" });
+      return [T9.orderCard(text.split("\n"), [els.canvas], `${state.name}-halftone-order.png`), file];
+    } }).catch(() => T9.openWA(text));
+  });
 })();

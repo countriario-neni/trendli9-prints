@@ -356,16 +356,22 @@
     loadCheckoutFiles(items);
   }
   // read the cart's files before Send, so sharing can happen inside that tap
-  // each item's first file is its preview picture (sheet layout / mockup) for the order card
+  // every cart item contributes a picture to the order card: its saved preview (sheet layout /
+  // mockup) or, for shop items, the product photo; saved files ride along after the card
   let coFiles = [], coPictures = [];
+  const productPicture = i => {
+    const src = i.photo || i.img;
+    return src ? fetch(`assets/img/${src}.webp`).then(r => r.blob()).then(b => createImageBitmap(b)).catch(() => null) : Promise.resolve(null);
+  };
   function loadCheckoutFiles(items) {
-    const note = $("#coFiles"), send = $("#checkoutForm [type=submit]"), withFiles = items.filter(i => i.files);
+    const note = $("#coFiles"), send = $("#checkoutForm [type=submit]");
     coFiles = []; coPictures = [];
-    note.hidden = !withFiles.length; send.disabled = false;
-    if (!withFiles.length) return;
-    note.textContent = "Attaching your files…"; send.disabled = true;
-    Promise.all(withFiles.map(i => fileStore.get(i.key).catch(() => []))).then(async lists => {
-      coPictures = (await Promise.all(lists.map(l => l[0] && /^image\//.test(l[0].type) ? createImageBitmap(l[0]).catch(() => null) : null))).filter(Boolean);
+    note.hidden = false; note.textContent = "Preparing your order image…"; send.disabled = true;
+    Promise.all(items.map(i => i.files ? fileStore.get(i.key).catch(() => []) : Promise.resolve([]))).then(async lists => {
+      coPictures = (await Promise.all(items.map((i, k) => {
+        const first = lists[k][0];
+        return first && /^image\//.test(first.type) ? createImageBitmap(first).catch(() => productPicture(i)) : productPicture(i);
+      }))).filter(Boolean);
       const seen = new Set();
       coFiles = lists.flatMap(l => l.slice(1)).map(f => { // the same name twice (two gang sheets) gets a number
         let name = f.name, k = 1;
@@ -373,7 +379,7 @@
         seen.add(name);
         return name === f.name ? f : new File([f], name, { type: f.type });
       });
-      note.textContent = coPictures.length || coFiles.length ? "Your designs go with the order as one order image (preview + details), plus your files where WhatsApp allows." : "Your files couldn't be loaded - attach them in WhatsApp after sending.";
+      note.textContent = coPictures.length ? "WhatsApp opens on our chat with your order and its picture attached — you just tap Send." : "WhatsApp opens on our chat with your order — you just tap Send.";
       send.disabled = false;
     });
   }

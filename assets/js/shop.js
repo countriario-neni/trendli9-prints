@@ -110,13 +110,34 @@
     form.addEventListener("submit", e => {
       e.preventDefault(); const r = read();
       if (hasSizes && !r.qty) { window.T9.toast("Add a quantity for at least one size"); form.querySelector(".size-cell input").focus(); return; }
-      cart.add({ productId: p.id, name: p.name, mockup: p.mockup, img: p.img, color: r.color?.name, colorHex: r.color?.hex, sizes: r.sizes, variant: r.variant, qty: r.qty, unit: hasSizes ? "pcs" : p.unit,
+      cart.add({ productId: p.id, name: p.name, mockup: p.mockup, img: p.img, photo: !colourTouched ? p.photo : null, color: r.color?.name, colorHex: r.color?.hex, sizes: r.sizes, variant: r.variant, qty: r.qty, unit: hasSizes ? "pcs" : p.unit,
         areas: r.areaIds.map(id => p.areas.find(a => a.id === id).name), total: r.pl.total, notes: r.notes, hasArtwork: p.cat !== "consumables" });
       window.T9.closeLayers();
     });
-    $("#qvWA").addEventListener("click", () => { const r = read(); openWA(`Hi Trendli9! I'm interested in *${p.name}*${r.color ? ` (${r.color.name})` : ""}${r.variant ? ` — ${r.variant}` : ""}${r.qty ? `, qty ${r.qty}` : ""}.${r.notes ? `\nNotes: ${r.notes}` : ""}\nPlease share price & details.`); });
+    $("#qvWA").addEventListener("click", () => {
+      const r = read();
+      sendWithPicture(p, `Hi Trendli9! I'm interested in *${p.name}*${r.color ? ` (${r.color.name})` : ""}${r.variant ? ` — ${r.variant}` : ""}${r.qty ? `, qty ${r.qty}` : ""}.${r.notes ? `\nNotes: ${r.notes}` : ""}\nPlease share price & details.`, colourTouched && r.color ? r.color.hex : null);
+    });
     update();
     openLayer($("#qvModal"));
+  }
+
+  /* WhatsApp opens on the studio's chat with the enquiry text and the product picture
+     (chosen colour mockup, or the product photo) as its preview image. */
+  async function productPicture(p, colorHex) {
+    if (p.mockup && colorHex) {
+      const img = new Image();
+      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(MK.svg(p.mockup, { color: colorHex, inner: MK.sampleArt(p.mockup) }));
+      await img.decode(); return img;
+    }
+    const src = p.photo || p.img;
+    return src ? createImageBitmap(await (await fetch(`assets/img/${src}.webp`)).blob()) : null;
+  }
+  function sendWithPicture(p, text, colorHex) {
+    window.T9.orderWithFiles({ text, getFiles: async () => {
+      let pic = null; try { pic = await productPicture(p, colorHex); } catch { }
+      return [window.T9.orderCard(text.split("\n"), pic ? [pic] : [], `trendli9-${p.id}-enquiry.png`)];
+    } }).catch(() => openWA(text));
   }
 
   // services we do on the customer's own items: description + WhatsApp enquiry only, no price or cart
@@ -129,7 +150,7 @@
         <p class="muted">${esc(p.desc)}</p>
         <button class="btn btn--wa btn--block" type="button" id="qvWA">${I("whatsapp")} Enquire on WhatsApp</button>
       </div>`;
-    $("#qvWA").addEventListener("click", () => openWA(`Hi Trendli9! I'd like to enquire about *${p.name}*.\nApron type & quantity: \nLogo / design: \nDeadline: `));
+    $("#qvWA").addEventListener("click", () => sendWithPicture(p, `Hi Trendli9! I'd like to enquire about *${p.name}*.\nApron type & quantity: \nLogo / design: \nDeadline: `));
     openLayer($("#qvModal"));
   }
 
