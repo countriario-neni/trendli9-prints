@@ -1109,10 +1109,13 @@
     try { data = sessionStorage.getItem(IMPORT_KEY); } catch { data = null; }
     if (!data) return;
     try { sessionStorage.removeItem(IMPORT_KEY); } catch { /* ignore */ }
-    if (!/^data:image\/(png|jpeg|webp);base64,/.test(data)) return;
+    let item = { src: data, widthIn: 0, name: "halftone-design.png" }; // older hand-offs were a bare data URL
+    try { if (data[0] === "{") item = { ...item, ...JSON.parse(data) }; } catch { return; }
+    if (!/^data:image\/(png|jpeg|webp);base64,/.test(item.src)) return;
+    const name = String(item.name).replace(/[^\w.-]+/g, "-").slice(0, 80) || "halftone-design.png";
     try {
-      const blob = await (await fetch(data)).blob();
-      if (await addFile(blob, "halftone-design.png")) { renderList(); schedule(0); toast("Added your halftone design"); }
+      const blob = await (await fetch(item.src)).blob();
+      if (await addFile(new File([blob], name, { type: blob.type }), name, +item.widthIn || 0)) { renderList(); schedule(0); toast(`Added your halftone design at ${inch(state.designs[state.designs.length - 1].wIn)} wide`); }
     } catch { /* ignore broken hand-off */ }
   })();
 })();

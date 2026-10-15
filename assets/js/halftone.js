@@ -209,8 +209,10 @@
 
   els.send.addEventListener("click", () => withBusy(els.send, "Preparing for the gang sheet…", async () => {
     const c = await renderFull();
-    const url = c.toDataURL("image/png");
-    try { sessionStorage.setItem("t9_gangsheet_import", url); }
+    // lands on the 22 × 39 in portrait sheet at 10 in wide, or the art's 300-DPI width if that's smaller
+    const widthIn = Math.min(10, c.width / 300);
+    const data = JSON.stringify({ src: c.toDataURL("image/png"), widthIn, name: `${state.name}-halftone.png` });
+    try { sessionStorage.setItem("t9_gangsheet_import", data); }
     catch (_) { toast("Too large — download it instead"); setStatus("Too large to hand off — please download the PNG instead."); return; }
     location.href = "gang-sheet.html";
   }));
