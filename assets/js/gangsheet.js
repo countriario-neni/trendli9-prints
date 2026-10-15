@@ -1,8 +1,11 @@
 /* =========================================================
-   TRENDLI9 PRINTS — Auto Gang Sheet studio
+   TRENDLI9 PRINTS — Gang Sheet Builder
    Local-only: files are read in the browser, never uploaded.
-   Packing: MaxRects (free-rectangle list) into a fixed-width,
-   unbounded-length strip, with optional 90° rotation.
+   Every sheet is 22 × 39 in, portrait. Designs that don't fit on
+   one sheet flow onto Sheet 2, Sheet 3… (never a longer sheet).
+   All sizes are stored and shown in inches.
+   Packing: MaxRects (free-rectangle list) into fixed bins, with
+   optional 90° rotation.
    ========================================================= */
 (function () {
   "use strict";
@@ -11,19 +14,21 @@
   const { $, esc, money, toast } = T9;
   const I = window.T9_ICON;
 
-  const PRICE_M = C.dtfPricePerMeter || 250;
+  const SHEET_W = 22, SHEET_H = 39, DPI = 300;           // inches · print resolution
+  const PRICE_M = C.dtfPricePerMeter || 250;             // each 39 in sheet is billed as 1 metre
+  const SIZE_MIN = 0.25, W_MAX = 21.5, H_MAX = SHEET_H - 0.5;
+  const GAP_MAX = 2, MARGIN_MAX = 1;
   const IMPORT_KEY = "t9_gangsheet_import";
   const TYPES = /^image\/(png|jpeg|webp|svg\+xml)$/;
   const EXT = /\.(png|jpe?g|webp|svg)$/i;
   const EPS = 1e-6;
-  const inch = cm => (cm / 2.54).toFixed(cm / 2.54 >= 10 ? 1 : 2);
-  const r1 = n => Math.round(n * 10) / 10;
-  const fmt = n => (Math.round(n * 10) / 10).toString();
+  const f2 = n => (Math.round(n * 100) / 100).toFixed(2);
+  const inch = n => f2(n) + " in";
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
   const state = {
-    designs: [],          // { id, name, img, url, pw, ph, widthCm, qty, opaque }
-    sheet: "58", customW: 45,
-    margin: 0.5, gap: 0.5, rotate: true,
+    designs: [],          // see addFile()
+    margin: 0.25, gap: 0.3, rotate: true,
     bg: "checker",
     activeId: null,
     layout: null          // last packing result
@@ -31,14 +36,13 @@
   let uid = 0;
 
   /* ======================================================
-     MaxRects strip packer
+     MaxRects bin packer
      items: [{ w, h, ref }]  (sizes already include the gap)
-     Returns { placed: [{x,y,w,h,rot,ref}], height }
+     Places what fits into one binW × binH bin, returns the rest.
      ====================================================== */
-  function runMaxRects(items, binW, allowRot, rule) {
-    let free = [{ x: 0, y: 0, w: binW, h: 1e9 }];
-    const placed = [];
-    let height = 0;
+  function runBin(items, binW, binH, allowRot, rule) {
+    let free = [{ x: 0, y: 0, w: binW, h: binH }];
+    const placed = [], rest = [];
     // smallest dimension still to be placed (suffix minimum) -> drop useless free slivers
     const minDim = new Array(items.length + 1).fill(Infinity);
     for (let i = items.length - 1; i >= 0; i--) minDim[i] = Math.min(minDim[i + 1], items[i].w, items[i].h);
@@ -53,16 +57,15 @@
           if (w > f.w + EPS || h > f.h + EPS) continue;
           const short = Math.min(f.w - w, f.h - h), bottom = f.y + h;
           // "bssf": best-short-side-fit, ties -> lowest bottom edge
-          // "bottom": lowest bottom edge first (keeps the strip short), ties -> BSSF
+          // "bottom": lowest bottom edge first (fills the sheet top-down), ties -> BSSF
           const s1 = rule === "bssf" ? short : bottom, s2 = rule === "bssf" ? bottom : short, s3 = f.x;
           if (s1 < b1 - EPS || (Math.abs(s1 - b1) <= EPS && (s2 < b2 - EPS || (Math.abs(s2 - b2) <= EPS && s3 < b3)))) {
             b1 = s1; b2 = s2; b3 = s3; best = { x: f.x, y: f.y, w, h, rot: !!o, ref: it.ref };
           }
         }
       }
-      if (!best) continue; // cannot happen: oversize items are filtered out before packing
+      if (!best) { rest.push(it); continue; } // no room left on this sheet
       placed.push(best);
-      if (best.y + best.h > height) height = best.y + best.h;
 
       // split every free rect that intersects the placed one
       const kept = [], added = [], md = minDim[n + 1];
@@ -98,7 +101,7 @@
       }
       for (let i = 0; i < newOk.length; i++) free.push(newOk[i]);
     }
-    return { placed, height };
+    return { placed, rest };
   }
 
   const ORDERS = [
@@ -107,47 +110,66 @@
     (a, b) => b.h - a.h || b.w - a.w,
     (a, b) => b.w - a.w || b.h - a.h
   ];
-  function packStrip(items, binW, allowRot) {
-    if (!items.length) return { placed: [], height: 0 };
-    let best = null;
+  const usedH = placed => placed.reduce((m, p) => Math.max(m, p.y + p.h), 0);
+  // Fill sheet after sheet until everything is placed; keep the ordering/rule that needs fewest sheets.
+  function packSheets(items, binW, binH, allowRot) {
+    if (!items.length) return [];
+    let best = null, bestTail = Infinity;
     for (const ord of ORDERS) {
       const sorted = items.slice().sort(ord);
       for (const rule of ["bottom", "bssf"]) {
-        const r = runMaxRects(sorted, binW, allowRot, rule);
-        if (!best || r.height < best.height - EPS) best = r;
+        const sheets = [];
+        let rest = sorted;
+        while (rest.length) {
+          const r = runBin(rest, binW, binH, allowRot, rule);
+          if (!r.placed.length) break; // cannot happen: oversize items are filtered out before packing
+          sheets.push(r.placed); rest = r.rest;
+        }
+        const tail = usedH(sheets[sheets.length - 1]);
+        if (!best || sheets.length < best.length || (sheets.length === best.length && tail < bestTail - EPS)) { best = sheets; bestTail = tail; }
       }
     }
     return best;
   }
-  window.T9_GANG = { packStrip }; // exposed for testing
+  window.T9_GANG = { packSheets }; // exposed for testing
 
   /* ======================================================
-     Model helpers
+     Model helpers (inches)
      ====================================================== */
-  const sheetW = () => state.sheet === "custom" ? Math.min(58, Math.max(10, +state.customW || 10)) : +state.sheet;
-  const heightOf = d => d.widthCm * d.ph / d.pw;
+  // art size in source pixels after trim + rotation
+  const artPx = d => (d.rot % 2 ? [d.trim.h, d.trim.w] : [d.trim.w, d.trim.h]);
+  const aspect = d => { const [w, h] = artPx(d); return h / w; };
+  const dpiOf = d => d.vector ? Infinity : Math.min(artPx(d)[0] / d.wIn, artPx(d)[1] / d.hIn);
+  const usable = () => [SHEET_W - 2 * state.margin, SHEET_H - 2 * state.margin];
+
+  // Does the design fit inside 22 × 39 in minus the margins (rotated if allowed)?
+  function fitOf(d) {
+    const [UW, UH] = usable(), w = d.wIn, h = d.hIn, rot = state.rotate;
+    const inRange = w >= SIZE_MIN - EPS && h >= SIZE_MIN - EPS && w <= W_MAX + EPS && h <= H_MAX + EPS;
+    const fits = inRange && ((w <= UW + EPS && h <= UH + EPS) || (rot && h <= UW + EPS && w <= UH + EPS));
+    if (fits) return { fits };
+    // largest size with the same proportions that would fit
+    const lim = Math.min(W_MAX / w, H_MAX / h);
+    const s1 = Math.min(UW / w, UH / h, lim), s2 = rot ? Math.min(UH / w, UW / h, lim) : 0;
+    const s = Math.max(s1, s2);
+    return { fits, maxW: Math.floor(w * s * 100) / 100, maxH: Math.floor(h * s * 100) / 100 };
+  }
 
   function compute() {
-    const W = sheetW(), m = state.margin, g = state.gap;
-    const usable = W - 2 * m;
+    const m = state.margin, g = state.gap, [UW, UH] = usable();
     const items = [], oversize = [];
     for (const d of state.designs) {
-      const w = d.widthCm, h = heightOf(d);
-      const fits = w <= usable + EPS || (state.rotate && h <= usable + EPS);
-      if (!fits) { oversize.push(d); continue; }
-      for (let q = 0; q < d.qty; q++) items.push({ w: w + g, h: h + g, ref: d });
+      if (!fitOf(d).fits) { oversize.push(d); continue; }
+      for (let q = 0; q < d.qty; q++) items.push({ w: d.wIn + g, h: d.hIn + g, ref: d });
     }
     const t0 = performance.now();
-    const res = packStrip(items, usable + g, state.rotate);
-    const ms = performance.now() - t0;
-    const content = res.placed.length ? res.height - g : 0;
-    const L = res.placed.length ? content + 2 * m : 0;
-    const area = res.placed.reduce((s, p) => s + (p.w - g) * (p.h - g), 0);
-    const billCm = res.placed.length ? Math.max(100, Math.ceil((L - EPS) / 10) * 10) : 0;
+    const sheets = packSheets(items, UW + g, UH + g, state.rotate);
+    const prints = sheets.reduce((s, p) => s + p.length, 0);
+    const area = sheets.reduce((s, sh) => s + sh.reduce((a, p) => a + (p.w - g) * (p.h - g), 0), 0);
     return {
-      W, L: Math.ceil(L * 10 - EPS) / 10, m, g, placed: res.placed, oversize, ms,
-      prints: res.placed.length, eff: L ? area / (W * L) * 100 : 0,
-      billCm, metres: billCm / 100, price: billCm / 100 * PRICE_M
+      m, g, sheets, oversize, prints, ms: performance.now() - t0,
+      eff: sheets.length ? area / (sheets.length * SHEET_W * SHEET_H) * 100 : 0,
+      price: sheets.length * PRICE_M
     };
   }
 
@@ -175,19 +197,25 @@
       return false;
     } catch { return true; } // can't sample (e.g. tainted SVG) — don't warn
   }
-  async function addFile(file, name, widthCm) {
+  // default print width: 10 in or the art's 300-DPI width, whichever is smaller
+  const defaultWidth = d => clamp(d.vector ? 10 : Math.min(10, artPx(d)[0] / DPI), SIZE_MIN, W_MAX);
+  async function addFile(file, name, widthIn) {
     const type = file.type || "";
     if (!TYPES.test(type) && !EXT.test(name || "")) { toast(`${name || "File"} skipped — use PNG, JPG, WEBP or SVG`); return false; }
     const url = URL.createObjectURL(file);
     try {
       const img = await loadImage(url);
+      const vector = /svg/i.test(type) || /\.svg$/i.test(name || "");
       let pw = img.naturalWidth, ph = img.naturalHeight;
       if (!pw || !ph) { pw = 1000; ph = 1000; } // SVG without intrinsic size
       const d = {
-        id: "d" + (++uid), name: name || "design", img, url, pw, ph,
-        widthCm: widthCm || Math.min(25, Math.max(1, sheetW() - 2 * state.margin)),
-        qty: 1, opaque: !hasTransparency(img, /jpe?g$/i.test(type) || /\.jpe?g$/i.test(name || ""))
+        id: "d" + (++uid), name: name || "design", file, img, url, pw, ph, vector,
+        trim: { x: 0, y: 0, w: pw, h: ph }, rot: 0, flipH: false, flipV: false,
+        wIn: 0, hIn: 0, lock: true, qty: 1,
+        opaque: !hasTransparency(img, /jpe?g$/i.test(type) || /\.jpe?g$/i.test(name || ""))
       };
+      d.wIn = widthIn ? clamp(widthIn, SIZE_MIN, W_MAX) : defaultWidth(d);
+      d.hIn = d.wIn * aspect(d);
       state.designs.push(d);
       state.activeId = d.id;
       return true;
@@ -210,7 +238,6 @@
      ====================================================== */
   const listEl = $("#gsList");
   function rowHTML(d) {
-    const h = heightOf(d);
     return `<li class="gs-row${d.id === state.activeId ? " is-active" : ""}" data-id="${d.id}">
       <img class="gs-row__thumb" src="${d.url}" alt="">
       <span class="gs-row__name" title="${esc(d.name)}">${esc(d.name)}</span>
@@ -219,12 +246,12 @@
         <button type="button" class="rm" data-act="rm" aria-label="Remove ${esc(d.name)}" title="Remove">${I("trash")}</button>
       </span>
       <div class="gs-row__ctrls">
-        <label class="gs-w">W <input type="number" data-f="w" min="1" max="200" step="0.5" value="${fmt(d.widthCm)}" inputmode="decimal" aria-label="Print width in cm for ${esc(d.name)}"> cm</label>
-        <span class="gs-dim" data-dim>× ${fmt(h)} cm H</span>
-        <div class="qty" role="group" aria-label="Quantity for ${esc(d.name)}">
-          <button type="button" data-act="minus" aria-label="Decrease quantity">−</button>
-          <input type="number" data-f="q" min="1" max="500" value="${d.qty}" inputmode="numeric" aria-label="Quantity">
-          <button type="button" data-act="plus" aria-label="Increase quantity">+</button>
+        <label class="gs-w">W <input type="number" data-f="w" min="${SIZE_MIN}" max="${W_MAX}" step="0.01" value="${f2(d.wIn)}" inputmode="decimal" aria-label="Print width in inches for ${esc(d.name)}"> in</label>
+        <span class="gs-dim" data-dim>× ${inch(d.hIn)} H</span>
+        <div class="qty" role="group" aria-label="Copies of ${esc(d.name)}">
+          <button type="button" data-act="minus" aria-label="Fewer copies">−</button>
+          <input type="number" data-f="q" min="1" max="500" value="${d.qty}" inputmode="numeric" aria-label="Copies">
+          <button type="button" data-act="plus" aria-label="More copies">+</button>
         </div>
       </div>
       ${d.opaque ? `<p class="gs-row__warn">No transparent background — DTF prints every non-transparent pixel</p>` : ""}
@@ -242,8 +269,9 @@
   }
   function updateRowDim(d) {
     const li = listEl.querySelector(`.gs-row[data-id="${d.id}"]`);
-    if (li) li.querySelector("[data-dim]").textContent = `× ${fmt(heightOf(d))} cm H`;
+    if (li) li.querySelector("[data-dim]").textContent = `× ${inch(d.hIn)} H`;
   }
+  function setWidth(d, w) { d.wIn = w; if (d.lock) d.hIn = w * aspect(d); updateRowDim(d); }
 
   listEl.addEventListener("focusin", e => { const d = findD(e.target); if (d) setActive(d.id); });
   listEl.addEventListener("pointerdown", e => { const d = findD(e.target); if (d) setActive(d.id); });
@@ -256,7 +284,7 @@
       b.parentElement.querySelector("input").value = d.qty;
       schedule();
     } else if (act === "dup") {
-      const c = { ...d, id: "d" + (++uid) };
+      const c = { ...d, id: "d" + (++uid), trim: { ...d.trim } };
       state.designs.splice(state.designs.indexOf(d) + 1, 0, c);
       state.activeId = c.id; renderList(); schedule(0);
       listEl.querySelector(`.gs-row[data-id="${c.id}"] [data-act="dup"]`)?.focus();
@@ -275,14 +303,16 @@
     const d = findD(inp); if (!d) return;
     const v = parseFloat(inp.value);
     if (!(v > 0)) return;
-    if (inp.dataset.f === "w") { d.widthCm = Math.min(200, Math.max(1, v)); updateRowDim(d); }
+    // sizes are kept as typed so an out-of-range size can be flagged (not silently changed)
+    if (inp.dataset.f === "w") setWidth(d, v);
     else d.qty = Math.min(500, Math.max(1, Math.round(v)));
     schedule();
   });
   listEl.addEventListener("change", e => { // normalise displayed value on blur/enter
     const inp = e.target.closest("[data-f]"); if (!inp) return;
     const d = findD(inp); if (!d) return;
-    inp.value = inp.dataset.f === "w" ? fmt(d.widthCm) : d.qty;
+    if (inp.dataset.f === "w") { if (d.wIn < SIZE_MIN) { setWidth(d, SIZE_MIN); schedule(0); } inp.value = f2(d.wIn); }
+    else inp.value = d.qty;
   });
 
   /* Size guide */
@@ -295,15 +325,15 @@
     const c = e.target.closest("[data-size]"); if (!c) return;
     const d = state.designs.find(x => x.id === state.activeId) || state.designs[0];
     if (!d) { toast("Upload a design first"); return; }
-    d.widthCm = +c.dataset.size;
+    setWidth(d, +c.dataset.size);
     const inp = listEl.querySelector(`.gs-row[data-id="${d.id}"] [data-f="w"]`);
-    if (inp) inp.value = fmt(d.widthCm);
-    updateRowDim(d); schedule(0);
-    toast(`${d.name} set to ${d.widthCm} cm wide`);
+    if (inp) inp.value = f2(d.wIn);
+    schedule(0);
+    toast(`${d.name} set to ${inch(d.wIn)} wide`);
   });
 
   /* ======================================================
-     UI: upload, sheet, layout
+     UI: upload, layout
      ====================================================== */
   const fileInp = $("#gsFile"), drop = $("#gsDrop");
   fileInp.addEventListener("change", () => { addFiles(fileInp.files).then(() => { fileInp.value = ""; }); });
@@ -313,27 +343,13 @@
   drop.tabIndex = 0;
   drop.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInp.click(); } });
 
-  function widthNote() {
-    const W = sheetW();
-    $("#gsWidthNote").textContent = `${fmt(W)} cm = ${inch(W)} in` + (state.sheet === "58" ? " · Trendli9's standard DTF roll" : "");
-  }
-  $("#gsWidthSeg").addEventListener("click", e => {
-    const b = e.target.closest("[data-w]"); if (!b) return;
-    state.sheet = b.dataset.w;
-    $("#gsWidthSeg").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
-    $("#gsCustomWrap").hidden = state.sheet !== "custom";
-    if (state.sheet === "custom") $("#gsCustomW").focus();
-    widthNote(); schedule(0);
-  });
-  $("#gsCustomW").addEventListener("input", e => { const v = parseFloat(e.target.value); if (v > 0) { state.customW = v; widthNote(); schedule(); } });
-  $("#gsCustomW").addEventListener("change", e => { e.target.value = fmt(sheetW()); state.customW = sheetW(); });
   const numIn = (id, key, max) => {
     const el = $(id);
-    el.addEventListener("input", () => { const v = parseFloat(el.value); if (v >= 0) { state[key] = Math.min(max, v); schedule(); } });
-    el.addEventListener("change", () => { el.value = fmt(state[key]); });
+    el.addEventListener("input", () => { const v = parseFloat(el.value); if (v >= 0) { state[key] = clamp(v, 0, max); schedule(); } });
+    el.addEventListener("change", () => { el.value = f2(state[key]); });
   };
-  numIn("#gsMargin", "margin", 5);
-  numIn("#gsGap", "gap", 5);
+  numIn("#gsMargin", "margin", MARGIN_MAX);
+  numIn("#gsGap", "gap", GAP_MAX);
   $("#gsRotate").addEventListener("change", e => { state.rotate = e.target.checked; schedule(0); });
   $("#gsBgSeg").addEventListener("click", e => {
     const b = e.target.closest("[data-bg]"); if (!b) return;
@@ -357,31 +373,37 @@
     ["#gsAdd", "#gsWA", "#gsDL"].forEach(s => { $(s).disabled = !ok; });
   }
 
+  const sheetsTxt = n => `${n} sheet${n === 1 ? "" : "s"}`;
   function renderSummary(L) {
     const row = (k, v, cls = "") => `<div class="${cls}"><dt>${k}</dt><dd>${v}</dd></div>`;
-    if (!L || !L.prints) {
-      $("#gsSummary").innerHTML = row("Sheet size", "—") + row("Prints", "0") + row("Fill efficiency", "—") + row("Billable length", "—") + row("Estimated price", money(0), "gs-price");
-      $("#gsMeta").textContent = "";
-      return;
-    }
+    const n = L ? L.sheets.length : 0;
     $("#gsSummary").innerHTML =
-      row("Sheet size", `${fmt(L.W)} × ${fmt(L.L)} cm <span class="muted" style="font-weight:500">(${inch(L.W)} × ${inch(L.L)} in)</span>`) +
-      row("Prints", L.prints) +
-      row("Fill efficiency", `${Math.round(L.eff)}%`) +
-      row("Billable length", `${L.metres.toFixed(1)} m`) +
-      row("Estimated price", money(L.price), "gs-price");
-    $("#gsMeta").textContent = `${fmt(L.W)} × ${fmt(L.L)} cm · ${L.prints} prints · ${money(PRICE_M)}/m · min 1 m, rounded up to 10 cm`;
+      row("Sheet size", `${SHEET_W} × ${SHEET_H} in <span class="muted" style="font-weight:500">(portrait)</span>`) +
+      row("Sheets", n || "—") +
+      row("Prints", L ? L.prints : 0) +
+      row("Fill efficiency", n ? `${Math.round(L.eff)}%` : "—") +
+      row("Estimated price", money(n * PRICE_M), "gs-price");
+    $("#gsPriceNote").textContent = n
+      ? `Estimated price ${money(L.price)} · ${sheetsTxt(n)} · from ${money(PRICE_M)} per metre — final price confirmed on WhatsApp.`
+      : `From ${money(PRICE_M)} per metre — each 22 × 39 in sheet is billed as 1 metre. Final price confirmed on WhatsApp.`;
+    $("#gsMeta").textContent = n ? `${sheetsTxt(n)} · ${SHEET_W} × ${SHEET_H} in · ${L.prints} prints` : "";
   }
   function renderOverflow(L) {
     const box = $("#gsOverflow");
     listEl.querySelectorAll("[data-over]").forEach(p => { p.hidden = true; });
+    listEl.querySelectorAll(".gs-row").forEach(li => li.classList.remove("is-bad"));
     if (!L || !L.oversize.length) { box.hidden = true; return; }
-    const usable = fmt(L.W - 2 * L.m);
+    const n = L.oversize.length;
     box.hidden = false;
-    box.textContent = `${L.oversize.length === 1 ? "1 design is" : L.oversize.length + " designs are"} too wide for a ${fmt(L.W)} cm sheet (max print ${usable} cm${state.rotate ? " even when rotated" : ""}) and ${L.oversize.length === 1 ? "isn't" : "aren't"} on the sheet.`;
+    box.textContent = `${n === 1 ? "1 design doesn't" : n + " designs don't"} fit on a ${SHEET_W} × ${SHEET_H} in sheet${state.rotate ? " even rotated" : ""} and ${n === 1 ? "isn't" : "aren't"} on the layout.`;
     L.oversize.forEach(d => {
-      const p = listEl.querySelector(`.gs-row[data-id="${d.id}"] [data-over]`);
-      if (p) { p.hidden = false; p.textContent = `Too wide for this sheet — reduce to ${usable} cm or less${state.rotate ? "" : ", or allow rotation"}.`; }
+      const li = listEl.querySelector(`.gs-row[data-id="${d.id}"]`); if (!li) return;
+      const f = fitOf(d), p = li.querySelector("[data-over]");
+      li.classList.add("is-bad");
+      p.hidden = false;
+      p.textContent = d.wIn < SIZE_MIN || d.hIn < SIZE_MIN
+        ? `Too small — the minimum print size is ${inch(SIZE_MIN)}.`
+        : `Too big for ${SHEET_W} × ${SHEET_H} in — the largest that fits is ${f2(f.maxW)} × ${f2(f.maxH)} in.`;
     });
   }
   function renderSteps(L) {
@@ -395,11 +417,31 @@
   }
 
   /* ======================================================
-     Preview canvas
+     Painting (shared by preview, thumbnails and print file)
      ====================================================== */
-  const wrap = $("#gsWrap"), cv = $("#gsCanvas");
-  const GUT = 34, PAD = 6; // ruler gutter + top/bottom padding (CSS px)
-  let checker = null;
+  // Draws one placed print. (x, y, w, h) is its box on the sheet in px; packRot = turned 90° by the packer.
+  function drawArt(ctx, d, x, y, w, h, packRot) {
+    ctx.save();
+    ctx.translate(x + w / 2, y + h / 2);
+    if (packRot) ctx.rotate(Math.PI / 2);
+    const bw = packRot ? h : w, bh = packRot ? w : h;        // the design's own box
+    ctx.scale(d.flipH ? -1 : 1, d.flipV ? -1 : 1);
+    ctx.rotate(d.rot * Math.PI / 2);
+    const sw = d.rot % 2 ? bh : bw, sh = d.rot % 2 ? bw : bh; // un-rotated source box
+    const t = d.trim;
+    ctx.drawImage(d.img, t.x, t.y, t.w, t.h, -sw / 2, -sh / 2, sw, sh);
+    ctx.restore();
+  }
+  function paintSheet(ctx, L, sheet, s, ox, oy) {
+    for (const p of sheet) drawArt(ctx, p.ref, ox + (L.m + p.x) * s, oy + (L.m + p.y) * s, (p.w - L.g) * s, (p.h - L.g) * s, p.rot);
+  }
+
+  /* ======================================================
+     Preview: every sheet drawn to scale, side by side
+     ====================================================== */
+  const wrap = $("#gsWrap"), sheetsEl = $("#gsSheets");
+  const GUT = 26; // ruler gutter (CSS px)
+  const checkers = new WeakMap();
   function checkerPattern(ctx, size) {
     const c = document.createElement("canvas"); c.width = c.height = size * 2;
     const x = c.getContext("2d");
@@ -407,65 +449,62 @@
     x.fillStyle = "#E4E1DA"; x.fillRect(0, 0, size, size); x.fillRect(size, size, size, size);
     return ctx.createPattern(c, "repeat");
   }
-  function paintDesigns(ctx, L, s, ox, oy) {
-    for (const p of L.placed) {
-      const d = p.ref, x = ox + (L.m + p.x) * s, y = oy + (L.m + p.y) * s;
-      const w = (p.w - L.g) * s, h = (p.h - L.g) * s;
-      if (!p.rot) ctx.drawImage(d.img, x, y, w, h);
-      else {
-        ctx.save(); ctx.translate(x + w / 2, y + h / 2); ctx.rotate(Math.PI / 2);
-        ctx.drawImage(d.img, -h / 2, -w / 2, h, w); // un-rotated size is (h × w)
-        ctx.restore();
-      }
+  // inch ruler down the left and across the top: tick every 1 in, label every 6 in
+  function ruler(ctx, s, ox, oy) {
+    ctx.save();
+    ctx.fillStyle = "#5E594F"; ctx.strokeStyle = "#5E594F"; ctx.lineWidth = 1;
+    ctx.font = '600 9px "Inter", ui-sans-serif, system-ui, sans-serif';
+    ctx.beginPath();
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    for (let i = 0; i <= SHEET_H; i++) {
+      const y = Math.round(oy + i * s) + .5, major = i % 6 === 0;
+      ctx.moveTo(ox - (major ? 8 : 4), y); ctx.lineTo(ox - 1, y);
+      if (major) ctx.fillText(String(i), ox - 10, y);
     }
+    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    for (let i = 0; i <= SHEET_W; i++) {
+      const x = Math.round(ox + i * s) + .5, major = i % 6 === 0;
+      ctx.moveTo(x, oy - (major ? 8 : 4)); ctx.lineTo(x, oy - 1);
+      if (major && i) ctx.fillText(String(i), x, oy - 9);
+    }
+    ctx.stroke(); ctx.restore();
   }
-  function draw() {
-    const L = state.layout;
-    const empty = !L || !L.prints;
-    wrap.classList.toggle("is-empty", empty);
-    if (empty) { cv.width = cv.height = 0; cv.style.width = cv.style.height = "0px"; return; }
-    const avail = Math.max(200, wrap.clientWidth - 24);
-    let s = Math.min(14, (avail - GUT) / L.W); // CSS px per cm
-    let cssW = GUT + L.W * s, cssH = L.L * s + PAD * 2;
-    let dpr = Math.min(window.devicePixelRatio || 1, 3);
-    // stay inside browser canvas limits for very long sheets
-    dpr = Math.max(0.25, Math.min(dpr, 30000 / cssH, Math.sqrt(48e6 / (cssW * cssH))));
+  function drawSheet(cv, L, sheet, cssW) {
+    const s = (cssW - GUT) / SHEET_W, cssH = GUT + SHEET_H * s;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr);
     cv.style.width = cssW + "px"; cv.style.height = cssH + "px";
     const ctx = cv.getContext("2d");
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cssW, cssH);
-    const ox = GUT, oy = PAD, sw = L.W * s, sh = L.L * s;
-
-    // sheet background
-    if (state.bg === "checker") { checker = checker || checkerPattern(ctx, 8); ctx.fillStyle = checker; }
+    const ox = GUT, oy = GUT, sw = SHEET_W * s, sh = SHEET_H * s;
+    if (state.bg === "checker") { if (!checkers.has(ctx)) checkers.set(ctx, checkerPattern(ctx, 6)); ctx.fillStyle = checkers.get(ctx); }
     else ctx.fillStyle = state.bg === "black" ? "#0A0A0A" : "#FFFFFF";
     ctx.fillRect(ox, oy, sw, sh);
-
-    // margin guide
     const dark = state.bg === "black";
-    if (L.m > 0) {
-      ctx.save(); ctx.setLineDash([4, 4]); ctx.strokeStyle = dark ? "rgba(255,255,255,.25)" : "rgba(10,10,10,.18)"; ctx.lineWidth = 1;
+    if (L.m > 0) { // margin guide
+      ctx.save(); ctx.setLineDash([3, 3]); ctx.strokeStyle = dark ? "rgba(255,255,255,.25)" : "rgba(10,10,10,.18)"; ctx.lineWidth = 1;
       ctx.strokeRect(ox + L.m * s + .5, oy + L.m * s + .5, sw - 2 * L.m * s - 1, sh - 2 * L.m * s - 1); ctx.restore();
     }
-    paintDesigns(ctx, L, s, ox, oy);
-
-    // sheet border
+    ctx.imageSmoothingQuality = "high";
+    paintSheet(ctx, L, sheet, s, ox, oy);
     ctx.strokeStyle = dark ? "#0A0A0A" : "rgba(10,10,10,.35)"; ctx.lineWidth = 1;
     ctx.strokeRect(ox + .5, oy + .5, sw - 1, sh - 1);
-
-    // ruler along the length: tick every 5 cm, label every 10 cm (or 50 cm when zoomed out)
-    const labelEvery = s * 10 < 18 ? 50 : 10;
-    ctx.fillStyle = "#5E594F"; ctx.strokeStyle = "#5E594F";
-    ctx.font = '500 10px "JetBrains Mono", ui-monospace, monospace';
-    ctx.textAlign = "right"; ctx.textBaseline = "middle";
-    ctx.beginPath();
-    for (let cm = 0; cm <= L.L + EPS; cm += 5) {
-      const y = Math.round(oy + cm * s) + .5, major = cm % 10 === 0;
-      ctx.moveTo(GUT - (major ? 10 : 5), y); ctx.lineTo(GUT - 1, y);
-      if (cm % labelEvery === 0) ctx.fillText(String(cm), GUT - 12, Math.min(Math.max(y, 6), cssH - 6));
+    ruler(ctx, s, ox, oy);
+  }
+  function draw() {
+    const L = state.layout;
+    const empty = !L || !L.prints;
+    wrap.classList.toggle("is-empty", empty);
+    if (empty) { sheetsEl.innerHTML = ""; return; }
+    const n = L.sheets.length;
+    if (sheetsEl.children.length !== n) {
+      sheetsEl.innerHTML = L.sheets.map((_, i) => `<figure class="gs-sheet"><canvas role="img" aria-label="Sheet ${i + 1} of ${n}"></canvas><figcaption>Sheet ${i + 1}</figcaption></figure>`).join("");
     }
-    ctx.stroke();
+    // side by side; each sheet keeps a readable size and the row wraps when space runs out
+    const avail = Math.max(160, sheetsEl.clientWidth);
+    const per = n === 1 ? Math.min(avail, 420) : Math.min(320, Math.max(150, (avail - 16 * (Math.min(n, 3) - 1)) / Math.min(n, 3)));
+    sheetsEl.querySelectorAll("canvas").forEach((cv, i) => drawSheet(cv, L, L.sheets[i], Math.floor(per)));
   }
   if ("ResizeObserver" in window) {
     let raf = 0;
@@ -473,29 +512,100 @@
   }
 
   /* ======================================================
+     Print file: 22 × 39 in at 300 DPI = 6600 × 11700 px per sheet.
+     Rendered in horizontal bands and streamed into a PNG encoder,
+     so phones never need one 300 MB canvas. Writes a pHYs chunk so
+     RIP software reads the file as 300 DPI.
+     ====================================================== */
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function pngChunk(type, data) {
+    const out = new Uint8Array(12 + data.length), dv = new DataView(out.buffer);
+    dv.setUint32(0, data.length);
+    for (let i = 0; i < 4; i++) out[4 + i] = type.charCodeAt(i);
+    out.set(data, 8);
+    let c = ~0;
+    for (let i = 4; i < 8 + data.length; i++) c = CRC[(c ^ out[i]) & 255] ^ (c >>> 8);
+    dv.setUint32(8 + data.length, ~c >>> 0);
+    return out;
+  }
+  async function sheetPNG(L, sheet, onProgress) {
+    const W = SHEET_W * DPI, H = SHEET_H * DPI, BAND = 256;
+    const paintBand = (x, y0) => {
+      x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, W, BAND);
+      x.setTransform(1, 0, 0, 1, 0, -y0);
+      const vis = sheet.filter(p => (L.m + p.y) * DPI < y0 + BAND && (L.m + p.y + p.h - L.g) * DPI > y0);
+      paintSheet(x, L, vis, DPI, 0, 0);
+    };
+    if (!("CompressionStream" in window)) { // older browsers: one big canvas
+      const c = document.createElement("canvas"); c.width = W; c.height = H;
+      const x = c.getContext("2d"); if (!x) throw new Error("ctx");
+      x.imageSmoothingQuality = "high"; paintSheet(x, L, sheet, DPI, 0, 0);
+      const blob = await new Promise(r => c.toBlob(r, "image/png"));
+      c.width = c.height = 0;
+      if (!blob) throw new Error("blob");
+      return blob;
+    }
+    const cs = new CompressionStream("deflate"), wr = cs.writable.getWriter(), parts = [];
+    const reading = (async () => { const r = cs.readable.getReader(); for (;;) { const { done, value } = await r.read(); if (done) return; parts.push(value); } })();
+    const c = document.createElement("canvas"); c.width = W; c.height = BAND;
+    const x = c.getContext("2d", { willReadFrequently: true }); if (!x) throw new Error("ctx");
+    x.imageSmoothingQuality = "high";
+    const rowLen = W * 4, stride = rowLen + 1;
+    for (let y0 = 0; y0 < H; y0 += BAND) {
+      const bh = Math.min(BAND, H - y0);
+      paintBand(x, y0);
+      const px = x.getImageData(0, 0, W, bh).data, rows = new Uint8Array(stride * bh);
+      for (let r = 0; r < bh; r++) { // PNG "Sub" filter: each byte minus the same channel one pixel left
+        const o = r * stride, s = r * rowLen;
+        rows[o] = 1;
+        for (let i = 0; i < 4; i++) rows[o + 1 + i] = px[s + i];
+        for (let i = 4; i < rowLen; i++) rows[o + 1 + i] = px[s + i] - px[s + i - 4];
+      }
+      await wr.write(rows);
+      onProgress?.((y0 + bh) / H);
+    }
+    await wr.close(); await reading;
+    c.width = c.height = 0;
+    const ihdr = new Uint8Array(13), hv = new DataView(ihdr.buffer);
+    hv.setUint32(0, W); hv.setUint32(4, H); ihdr.set([8, 6, 0, 0, 0], 8); // 8-bit RGBA
+    const phys = new Uint8Array(9), pv = new DataView(phys.buffer), ppm = Math.round(DPI / 0.0254);
+    pv.setUint32(0, ppm); pv.setUint32(4, ppm); phys[8] = 1;               // pixels per metre
+    return new Blob([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]), pngChunk("IHDR", ihdr), pngChunk("pHYs", phys),
+      ...parts.map(p => pngChunk("IDAT", p)), pngChunk("IEND", new Uint8Array(0))], { type: "image/png" });
+  }
+  const sheetName = (i, n) => `trendli9-gang-sheet-${SHEET_W}x${SHEET_H}in-sheet-${i + 1}-of-${n}-${DPI}dpi.png`;
+  function saveBlob(blob, name) {
+    const url = URL.createObjectURL(blob), a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+  /* ======================================================
      Actions
      ====================================================== */
-  const summaryLines = L => {
+  const perDesign = L => {
     const per = new Map();
-    L.placed.forEach(p => per.set(p.ref, (per.get(p.ref) || 0) + 1));
-    return Array.from(per, ([d, n]) => `${d.name} × ${n} @ ${fmt(d.widthCm)} cm`);
+    L.sheets.forEach(sh => sh.forEach(p => per.set(p.ref, (per.get(p.ref) || 0) + 1)));
+    return per;
   };
+  const summaryLines = L => Array.from(perDesign(L), ([d, n]) => `${d.name} — ${n} ${n === 1 ? "copy" : "copies"} @ ${f2(d.wIn)} × ${f2(d.hIn)} in`);
   function thumbDataURL(L) {
-    const s = 220 / Math.max(L.W, L.L);
-    const c = document.createElement("canvas");
-    c.width = Math.max(1, Math.round(L.W * s)); c.height = Math.max(1, Math.round(L.L * s));
+    const s = 220 / SHEET_H, c = document.createElement("canvas");
+    c.width = Math.round(SHEET_W * s); c.height = Math.round(SHEET_H * s);
     const x = c.getContext("2d");
     x.fillStyle = "#FFFFFF"; x.fillRect(0, 0, c.width, c.height);
-    paintDesigns(x, L, s, 0, 0);
+    paintSheet(x, L, L.sheets[0], s, 0, 0);
     try { return c.toDataURL("image/jpeg", 0.8); } catch { return null; }
   }
 
   $("#gsAdd").addEventListener("click", () => {
     const L = state.layout; if (!L || !L.prints) return;
+    const n = L.sheets.length;
     T9.cart.add({
-      productId: "dtf-meter", name: "DTF Gang Sheet", img: "svc-dtf",
-      qty: r1(L.metres), unit: "m",
-      variant: `${fmt(L.W)} cm × ${fmt(L.L)} cm · ${L.prints} prints`,
+      productId: "dtf-gang-sheet", name: "DTF Gang Sheet", img: "svc-dtf",
+      qty: n, unit: n === 1 ? "sheet" : "sheets",
+      variant: `${SHEET_W} × ${SHEET_H} in · ${L.prints} prints`,
       total: L.price, hasArtwork: true,
       notes: summaryLines(L).join("; "),
       thumb: thumbDataURL(L)
@@ -508,10 +618,10 @@
     const msg = [
       "Hi Trendli9! I'd like to order a DTF gang sheet:",
       "",
-      `*Sheet:* ${fmt(L.W)} cm × ${fmt(L.L)} cm (billable ${L.metres.toFixed(1)} m)`,
+      `*Sheet size:* ${SHEET_W} × ${SHEET_H} in (vertical) · Sheets: ${L.sheets.length}`,
       `*Prints (${L.prints}):*`,
       ...summaryLines(L).map(s => `• ${s}`),
-      `*Estimated price:* ${money(L.price)}`,
+      `*Estimated price:* ${money(L.price)} (from ${money(PRICE_M)} per metre — to be confirmed)`,
       "",
       "I'll attach the print file here."
     ].join("\n");
@@ -521,35 +631,18 @@
   const dlBtn = $("#gsDL");
   dlBtn.addEventListener("click", async () => {
     const L = state.layout; if (!L || !L.prints || dlBtn.classList.contains("is-busy")) return;
-    const label = dlBtn.querySelector("span"), orig = label.textContent;
-    const px = dpi => [Math.round(L.W / 2.54 * dpi), Math.round(L.L / 2.54 * dpi)];
-    let dpi = 300, [w, h] = px(dpi);
-    if (w * h > 100e6) { dpi = 150; [w, h] = px(dpi); }
-    // hard browser limits: ~32k px per side, ~250 MP area
-    if (h > 32000 || w * h > 250e6) {
-      dpi = Math.floor(Math.min(32000 / (L.L / 2.54), Math.sqrt(250e6 / ((L.W / 2.54) * (L.L / 2.54)))));
-      [w, h] = px(dpi);
-    }
+    const label = dlBtn.querySelector("span"), orig = label.textContent, n = L.sheets.length;
     dlBtn.classList.add("is-busy"); dlBtn.setAttribute("aria-busy", "true");
-    label.textContent = `Rendering ${dpi} DPI…`;
-    toast(`Rendering your print file at ${dpi} DPI${dpi < 300 ? " (large sheet)" : ""}…`);
-    await new Promise(r => requestAnimationFrame(() => setTimeout(r, 30))); // let the busy state paint
+    toast(`Rendering ${n === 1 ? "your print file" : n + " print files"} at ${DPI} DPI…`);
     try {
-      const c = document.createElement("canvas"); c.width = w; c.height = h;
-      const x = c.getContext("2d");
-      if (!x) throw new Error("ctx");
-      x.imageSmoothingQuality = "high";
-      paintDesigns(x, L, dpi / 2.54, 0, 0);
-      const blob = await new Promise(r => c.toBlob(r, "image/png"));
-      c.width = c.height = 0;
-      if (!blob) throw new Error("blob");
-      const url = URL.createObjectURL(blob), a = document.createElement("a");
-      a.href = url; a.download = `trendli9-gang-sheet-${fmt(L.W)}x${fmt(L.L)}cm-${dpi}dpi.png`;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-      toast(`Print file ready — ${w} × ${h} px at ${dpi} DPI`);
+      for (let i = 0; i < n; i++) {
+        const blob = await sheetPNG(L, L.sheets[i], p => { label.textContent = `Sheet ${i + 1} of ${n} · ${Math.round(p * 100)}%`; });
+        saveBlob(blob, sheetName(i, n));
+        await new Promise(r => setTimeout(r, 400)); // let the browser start each download
+      }
+      toast(`${n === 1 ? "Print file" : n + " print files"} ready — ${SHEET_W * DPI} × ${SHEET_H * DPI} px each at ${DPI} DPI`);
     } catch {
-      toast("Couldn't render the file on this device — try fewer or smaller prints, or send your art on WhatsApp");
+      toast("Couldn't render the file on this device — try fewer prints, or send your art on WhatsApp");
     } finally {
       dlBtn.classList.remove("is-busy"); dlBtn.removeAttribute("aria-busy"); label.textContent = orig;
     }
@@ -558,7 +651,7 @@
   /* ======================================================
      Init (+ hand-off from the Smart Halftone tool)
      ====================================================== */
-  widthNote(); renderList(); update();
+  renderList(); update();
   (async () => {
     let data = null;
     try { data = sessionStorage.getItem(IMPORT_KEY); } catch { data = null; }
@@ -567,7 +660,7 @@
     if (!/^data:image\/(png|jpeg|webp);base64,/.test(data)) return;
     try {
       const blob = await (await fetch(data)).blob();
-      if (await addFile(blob, "halftone-design.png", 25)) { renderList(); schedule(0); toast("Added your halftone design"); }
+      if (await addFile(blob, "halftone-design.png")) { renderList(); schedule(0); toast("Added your halftone design"); }
     } catch { /* ignore broken hand-off */ }
   })();
 })();

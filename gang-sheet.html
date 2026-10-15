@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Gang Sheet Builder — DTF Gang Sheets | Trendli9 Prints</title>
-  <meta name="description" content="Free DTF gang sheet builder — auto-pack designs on 58 cm sheets, instant price. Upload your art, set print sizes and order your gang sheet on WhatsApp from Trendli9 Prints, Visakhapatnam.">
+  <meta name="description" content="Free DTF gang sheet builder — auto-pack designs on 22 × 39 in sheets, instant price estimate. Upload your art, set print sizes and order your gang sheet on WhatsApp from Trendli9 Prints, Visakhapatnam.">
   <meta name="theme-color" content="#0B0B12">
   <link rel="icon" href="favicon.ico" sizes="32x32"><link rel="apple-touch-icon" href="assets/img/icon-180.png"><link rel="manifest" href="site.webmanifest">
   <meta property="og:title" content="Gang Sheet Builder — Trendli9 Prints"><meta property="og:image" content="assets/img/og-image.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261015j">
-  <link rel="stylesheet" href="assets/css/gangsheet.css?v=20261015j">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261016a">
+  <link rel="stylesheet" href="assets/css/gangsheet.css?v=20261016a">
 </head>
 <body>
   <div id="site-header"></div>
@@ -20,10 +20,10 @@
       <div class="container">
         <span class="eyebrow">Free tool · Gang Sheet Builder</span>
         <h1>Pack your gang sheet. <span class="grad-text">Pay only for what you print.</span></h1>
-        <p class="lead gs-hero__lead">Drop in your artwork, choose print sizes and quantities — we pack everything tightly onto a DTF roll and price it instantly.</p>
+        <p class="lead gs-hero__lead">Drop in your artwork, choose print sizes and copies — we pack everything tightly onto 22 × 39 in DTF sheets and estimate the price instantly.</p>
         <ol class="gs-steps" id="gsSteps" aria-label="How it works">
           <li data-step="1"><span class="gs-steps__n">01</span><span>Upload art</span></li>
-          <li data-step="2"><span class="gs-steps__n">02</span><span>Set sheet &amp; sizes</span></li>
+          <li data-step="2"><span class="gs-steps__n">02</span><span>Set sizes &amp; copies</span></li>
           <li data-step="3"><span class="gs-steps__n">03</span><span>Order or download</span></li>
         </ol>
       </div>
@@ -40,32 +40,18 @@
           </div>
 
           <div class="panel">
-            <h2><span class="n">01</span> Sheet width</h2>
-            <div class="seg-ctrl gs-seg" role="group" aria-label="Sheet width" id="gsWidthSeg">
-              <button type="button" data-w="58" aria-pressed="true">58 cm</button>
-              <button type="button" data-w="30" aria-pressed="false">30 cm</button>
-              <button type="button" data-w="custom" aria-pressed="false">Custom</button>
-            </div>
-            <div class="field gs-custom" id="gsCustomWrap" hidden>
-              <label for="gsCustomW">Custom width (cm, 10–58)</label>
-              <input class="input" type="number" id="gsCustomW" min="10" max="58" step="0.5" value="45" inputmode="decimal">
-            </div>
-            <p class="gs-note" id="gsWidthNote"></p>
-          </div>
-
-          <div class="panel">
             <div class="gs-panel-head">
-              <h2><span class="n">02</span> Designs &amp; sizes</h2>
+              <h2><span class="n">01</span> Designs &amp; sizes</h2>
               <button type="button" class="btn btn--sm btn--ghost" id="gsGuideBtn" aria-expanded="false" aria-controls="gsGuide"><i data-icon="ruler"></i> Size guide</button>
             </div>
             <div class="gs-guide" id="gsGuide" hidden>
               <p class="gs-note">Tap a size to apply it to the highlighted design.</p>
               <div class="gs-guide__chips" role="group" aria-label="Common print widths">
-                <button type="button" class="chip" data-size="9">Pocket / logo · 8–10 cm</button>
-                <button type="button" class="chip" data-size="19">Kids chest · 18–20 cm</button>
-                <button type="button" class="chip" data-size="28">Adult chest · 25–30 cm</button>
-                <button type="button" class="chip" data-size="32">Full back · 28–35 cm</button>
-                <button type="button" class="chip" data-size="7">Sleeve · 6–8 cm</button>
+                <button type="button" class="chip" data-size="3.5">Pocket / logo · 3–4 in</button>
+                <button type="button" class="chip" data-size="7.5">Kids chest · 7–8 in</button>
+                <button type="button" class="chip" data-size="11">Adult chest · 10–12 in</button>
+                <button type="button" class="chip" data-size="12.5">Full back · 11–14 in</button>
+                <button type="button" class="chip" data-size="2.75">Sleeve · 2.5–3 in</button>
               </div>
             </div>
             <ul class="gs-list" id="gsList" aria-label="Designs"></ul>
@@ -73,22 +59,22 @@
           </div>
 
           <div class="panel">
-            <h2><span class="n">03</span> Layout</h2>
+            <h2><span class="n">02</span> Layout</h2>
             <div class="gs-layout">
-              <div class="field"><label for="gsMargin">Edge margin (cm)</label><input class="input" type="number" id="gsMargin" min="0" max="5" step="0.1" value="0.5" inputmode="decimal"></div>
-              <div class="field"><label for="gsGap">Gap between prints (cm)</label><input class="input" type="number" id="gsGap" min="0" max="5" step="0.1" value="0.5" inputmode="decimal"></div>
+              <div class="field"><label for="gsMargin">Edge margin (in)</label><input class="input" type="number" id="gsMargin" min="0" max="1" step="0.05" value="0.25" inputmode="decimal"></div>
+              <div class="field"><label for="gsGap">Spacing between prints (in)</label><input class="input" type="number" id="gsGap" min="0" max="2" step="0.05" value="0.30" inputmode="decimal"></div>
             </div>
             <label class="gs-switch"><input type="checkbox" id="gsRotate" checked><span>Allow 90° rotation to save film</span></label>
           </div>
 
           <div class="panel gs-summary-panel">
-            <h2><span class="n">04</span> Summary</h2>
+            <h2><span class="n">03</span> Summary</h2>
             <dl class="gs-summary" id="gsSummary" aria-live="polite" aria-atomic="true"></dl>
-            <p class="gs-note">Estimated — final quote confirmed on WhatsApp.</p>
+            <p class="gs-note" id="gsPriceNote"></p>
             <div class="gs-actions">
               <button class="btn btn--accent btn--block" type="button" id="gsAdd" disabled><i data-icon="cart"></i> Add sheet to order</button>
               <button class="btn btn--wa btn--block" type="button" id="gsWA" disabled><i data-icon="whatsapp"></i> Order on WhatsApp</button>
-              <button class="btn btn--ghost btn--block" type="button" id="gsDL" disabled><i data-icon="download"></i> <span>Download print file</span></button>
+              <button class="btn btn--ghost btn--block" type="button" id="gsDL" disabled><i data-icon="download"></i> <span>Download print files</span></button>
             </div>
           </div>
         </div>
@@ -105,7 +91,7 @@
           </div>
           <div class="gs-warn" id="gsOverflow" role="alert" hidden></div>
           <div class="gs-canvas-wrap" id="gsWrap">
-            <canvas id="gsCanvas" role="img" aria-label="Gang sheet preview"></canvas>
+            <div class="gs-sheets" id="gsSheets"></div>
             <div class="gs-empty" id="gsEmpty">
               <i data-icon="layers"></i>
               <b>Your sheet will appear here</b>
@@ -120,22 +106,22 @@
     <section class="section gs-notes">
       <div class="container">
         <span class="eyebrow">Studio notes</span>
-        <h2>Get the most from <span class="grad-text">every metre.</span></h2>
+        <h2>Get the most from <span class="grad-text">every sheet.</span></h2>
         <ol class="gs-tips">
           <li><span class="gs-tips__n">01</span><h3>Use transparent PNGs</h3><p>DTF prints white ink under every pixel that isn't fully transparent. Remove backgrounds before uploading so you don't get a printed box around your design.</p></li>
           <li><span class="gs-tips__n">02</span><h3>Set the final print width</h3><p>The width you enter is the size it presses on the garment. Measure the area on the shirt — the size guide gives typical widths.</p></li>
-          <li><span class="gs-tips__n">03</span><h3>Rotation saves money</h3><p>Letting designs turn 90° often fits more prints per row and shortens the sheet, which lowers the price.</p></li>
+          <li><span class="gs-tips__n">03</span><h3>Rotation saves money</h3><p>Letting designs turn 90° often fits more prints per row and can save a whole sheet, which lowers the price.</p></li>
           <li><span class="gs-tips__n">04</span><h3>Need a hand?</h3><p>Not sure about sizes or artwork quality? <a href="#" class="link-arrow" data-wa="Hi Trendli9! I need help preparing a DTF gang sheet.">Ask us on WhatsApp <i data-icon="arrow"></i></a></p></li>
         </ol>
       </div>
     </section>
   </main>
   <div id="site-footer"></div>
-  <script src="assets/js/config.js?v=20261015j"></script>
-  <script src="assets/js/catalog.js?v=20261015j"></script>
-  <script src="assets/js/icons.js?v=20261015j"></script>
-  <script src="assets/js/mockups.js?v=20261015j"></script>
-  <script src="assets/js/app.js?v=20261015j"></script>
-  <script src="assets/js/gangsheet.js?v=20261015j"></script>
+  <script src="assets/js/config.js?v=20261016a"></script>
+  <script src="assets/js/catalog.js?v=20261016a"></script>
+  <script src="assets/js/icons.js?v=20261016a"></script>
+  <script src="assets/js/mockups.js?v=20261016a"></script>
+  <script src="assets/js/app.js?v=20261016a"></script>
+  <script src="assets/js/gangsheet.js?v=20261016a"></script>
 </body>
 </html>
