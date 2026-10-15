@@ -929,3 +929,55 @@ ol.steps { list-style: none; padding: 0; margin: 0; }
 @media (min-width: 861px) { .problems--4 { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1101px) { .problems--4 { grid-template-columns: repeat(4, 1fr); } .lanes--4 { grid-template-columns: 1.25fr 1fr 1fr 1fr; } }
 @media (min-width: 901px) and (max-width: 1100px) { .lanes--4 { grid-template-columns: 1fr 1fr; } }
+
+/* =========================================================
+   PHONE POLISH — calmer, roomier layout under 760px
+   ========================================================= */
+@media (max-width: 760px) {
+  /* floating dock: smaller, tucked into the corner, out of the way of the 3D story */
+  .dock { right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); gap: 10px; transition: opacity .3s, transform .3s var(--ease); }
+  .fab { width: 50px; height: 50px; }
+  .fab svg { width: 25px; height: 25px; }
+  .fab--bot .dot { width: 11px; height: 11px; top: 2px; right: 2px; }
+  .wa-bubble { right: 60px; width: 220px; font-size: .84rem; }
+  .chat { right: 12px; bottom: 76px; }
+  body.in-xp .dock { opacity: 0; transform: translateY(16px); pointer-events: none; }
+
+  /* 3D hero: one idea per screen */
+  .xp:has(.xp-beat:first-child.is-on) .xp__hud { opacity: 0; pointer-events: none; }
+  .xp__hud { bottom: calc(14px + env(safe-area-inset-bottom)); gap: 6px; transition: opacity .4s; }
+  .xp-hold { width: 76px; height: 76px; }
+  .xp__toggles { display: none; }
+  .xp-beat { padding-bottom: 150px; }
+  .xp-beat:first-child { padding-top: 50vh; }
+  .xp-card h1 { font-size: clamp(2rem, 9.5vw, 2.5rem); margin-bottom: 14px; }
+  .xp-card h2 { font-size: clamp(1.6rem, 7.5vw, 2rem); }
+  .xp-card .lead { font-size: 1rem; line-height: 1.55; }
+  .xp-card .hero__cta { margin: 20px 0 0; display: flex; flex-direction: column; gap: 10px; }
+  .xp-card .hero__cta .btn { width: 100%; justify-content: center; }
+  .xp-tags { gap: 6px; margin-top: 14px; }
+  .xp-tags button { padding: 6px 11px; font-size: .82rem; }
+  .xp-fabric { margin-top: 12px; font-size: .92rem; }
+  .xp-fabric__hint { display: none; }
+
+  /* typography & rhythm */
+  .eyebrow { font-size: .68rem; letter-spacing: .12em; }
+  .section { padding: 56px 0; }
+  .lead { font-size: 1rem; }
+
+  /* services hero: buttons side by side, tighter tiles */
+  .svc-hero__cta { flex-direction: column; gap: 10px; margin-top: 20px; }
+  .svc-hero__cta .btn { width: 100%; justify-content: center; }
+  .svc-hero > * { min-width: 0; }
+
+  /* shop toolbar: one swipeable row of filters, full-width search */
+  .shop-bar { gap: 10px; margin-bottom: 18px; }
+  .filter-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 4px; width: calc(100% + 32px); }
+  .filter-chips::-webkit-scrollbar { display: none; }
+  .filter-chips > * { flex: none; }
+  .search { min-width: 0; max-width: none; flex: 1 1 auto; }
+  .shop-bar .select { width: 136px; }
+}
+@media (max-width: 640px) {
+  .announce { display: none; }
+}

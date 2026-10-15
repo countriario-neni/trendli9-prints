@@ -351,7 +351,16 @@
       </section>`);
     const bubble = $("#waBubble");
     bubble.querySelector(".x").addEventListener("click", () => { bubble.classList.remove("is-show"); sessionStorage.setItem("t9_bub", "1"); });
-    try { if (!sessionStorage.getItem("t9_bub")) setTimeout(() => bubble.classList.add("is-show"), 7000); } catch { }
+    // on phones the dock steps aside while the 3D story fills the screen; the greeting waits until it's done
+    const xp = $("#xp"), phone = matchMedia("(max-width: 760px)");
+    let bubbleDue = false;
+    const showBubble = () => { if (document.body.classList.contains("in-xp") && phone.matches) bubbleDue = true; else bubble.classList.add("is-show"); };
+    if (xp) new IntersectionObserver(([en]) => {
+      document.body.classList.toggle("in-xp", en.isIntersecting);
+      if (en.isIntersecting && phone.matches) bubble.classList.remove("is-show");
+      else if (bubbleDue) { bubbleDue = false; bubble.classList.add("is-show"); }
+    }, { rootMargin: "0px 0px -60% 0px" }).observe(xp);
+    try { if (!sessionStorage.getItem("t9_bub")) setTimeout(showBubble, 7000); } catch { }
     initBot();
   }
 
