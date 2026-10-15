@@ -510,7 +510,9 @@
     x.fillStyle = "#F3F4F6"; x.fillRect(0, c.height - FOOT, W, FOOT);
     x.fillStyle = "#5A5F6E"; x.font = font(500, 22); x.textBaseline = "middle";
     x.fillText(`${C.brand} · WhatsApp ${C.phoneDisplay} · ${C.address.city}`, P, c.height - FOOT / 2);
-    return dataURLFile(c.toDataURL("image/png"), name);
+    const file = dataURLFile(c.toDataURL("image/png"), name);
+    file.pictures = pics; // the link preview shows these large
+    return file;
   }
 
   // what the share sheet gets: the card first, then other files while they fit WhatsApp / browser limits
@@ -563,13 +565,42 @@
      the link's preview (the order image) inside the same message. */
   // the free order store keeps files up to 10 MB each; bigger print sheets stay on the device
   const UPLOAD_MAX_FILES = 29, UPLOAD_MAX_BYTES = 60 * 1024 * 1024, UPLOAD_MAX_EACH = 10 * 1024 * 1024;
-  async function previewJPEG(card) { // small image for link previews (800 px loads fast enough for WhatsApp)
-    const bm = await createImageBitmap(card), w = Math.min(800, bm.width), h = Math.round(bm.height * w / bm.width);
-    const c = document.createElement("canvas"); c.width = w; c.height = h;
-    const x = c.getContext("2d"); x.fillStyle = "#FFFFFF"; x.fillRect(0, 0, w, h); x.drawImage(bm, 0, 0, w, h);
-    const b = await new Promise(r => c.toBlob(r, "image/jpeg", 0.82));
+  /* The link-preview image. WhatsApp shows a large preview only for a wide image
+     (about 1.91:1) under ~300 KB; a tall one shrinks to a small cropped thumbnail.
+     So: 1200×630 with the design pictures as big as they fit (the order text is
+     already in the message); without pictures, the top of the order card. */
+  async function previewJPEG(card) {
+    const W = 1200, H = 630, P = 28, BAR = 64;
+    const c = document.createElement("canvas"); c.width = W; c.height = H;
+    const x = c.getContext("2d");
+    x.fillStyle = "#FFFFFF"; x.fillRect(0, 0, W, H);
+    const pics = card.pictures && card.pictures.length ? card.pictures : null;
+    if (pics) {
+      const gap = 24, aw = W - 2 * P, ah = H - BAR - 2 * P;
+      const widths = pics.map(p => p.width * ah / p.height), sum = widths.reduce((s, w) => s + w, 0) + gap * (pics.length - 1);
+      const k = Math.min(1, (aw - gap * (pics.length - 1)) / (sum - gap * (pics.length - 1)));
+      let ox = (W - (sum - gap * (pics.length - 1)) * k - gap * (pics.length - 1)) / 2;
+      pics.forEach((p, i) => {
+        const w = widths[i] * k, h = ah * k, oy = BAR + P + (ah - h) / 2;
+        x.drawImage(p, ox, oy, w, h);
+        x.strokeStyle = "#E2E4EA"; x.lineWidth = 2; x.strokeRect(ox, oy, w, h);
+        ox += w + gap;
+      });
+    } else {
+      const bm = await createImageBitmap(card);
+      x.drawImage(bm, 0, 0, W, bm.height * W / bm.width);
+    }
+    // brand band (also covers the card's own header in the no-picture case)
+    x.fillStyle = "#0A0A0A"; x.fillRect(0, 0, W, BAR);
+    ["#00A8F0", "#E5007E", "#FFC400", "#FFFFFF"].forEach((col, i) => { x.fillStyle = col; x.beginPath(); x.arc(P + 7 + i * 20, BAR / 2, 6, 0, Math.PI * 2); x.fill(); });
+    x.fillStyle = "#FFFFFF"; x.textBaseline = "middle"; x.font = `800 28px Inter, "Segoe UI", system-ui, sans-serif`;
+    x.fillText(C.brand.toUpperCase(), P + 96, BAR / 2);
+    x.textAlign = "right"; x.font = `600 20px Inter, "Segoe UI", system-ui, sans-serif`; x.fillStyle = "#A6AAB8";
+    x.fillText("ORDER PREVIEW", W - P, BAR / 2);
+    let b = null;
+    for (const q of [0.85, 0.72, 0.6]) { b = await new Promise(r => c.toBlob(r, "image/jpeg", q)); if (b.size < 280 * 1024) break; }
     const f = new File([b], "preview.jpg", { type: "image/jpeg" });
-    f.w = w; f.h = h;
+    f.w = W; f.h = H;
     return f;
   }
   async function uploadOrder(text, files, onProgress) {
