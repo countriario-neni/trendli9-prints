@@ -67,6 +67,7 @@ async function createOrder(req, env, url, cors, okOrigin) {
   const used = new Set(), stored = [], skipped = [];
   await put("card.png", card);
   const hasPreview = isFile(preview) && preview.type === "image/jpeg" && preview.size <= MAX_VALUE;
+  const pw = Math.min(4000, +fd.get("pw") || 0) | 0, ph = Math.min(8000, +fd.get("ph") || 0) | 0; // preview size for og:image tags
   if (hasPreview) await put("preview.jpg", preview);
   for (const f of files) {
     if (f.size > MAX_VALUE) { skipped.push({ label: f.name, size: f.size }); continue; }
@@ -76,7 +77,7 @@ async function createOrder(req, env, url, cors, okOrigin) {
     await put(name, f);
     stored.push({ name, label: f.name, size: f.size, type: f.type });
   }
-  await env.ORDERS.put(base + "meta.json", JSON.stringify({ text, created: new Date().toISOString(), preview: hasPreview, files: stored, skipped }), { expirationTtl: TTL });
+  await env.ORDERS.put(base + "meta.json", JSON.stringify({ text, created: new Date().toISOString(), preview: hasPreview, pw, ph, files: stored, skipped }), { expirationTtl: TTL });
   return json({ id, url: `${url.origin}/o/${id}` }, 201, cors);
 }
 
@@ -113,7 +114,9 @@ async function orderPage(env, url, id) {
 <title>${esc(title)}</title><meta name="robots" content="noindex, nofollow">
 <meta property="og:type" content="website"><meta property="og:site_name" content="${esc(brand)}">
 <meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}">
-<meta property="og:image" content="${esc(img)}"><meta property="og:url" content="${esc(url.origin + url.pathname)}">
+<meta property="og:image" content="${esc(img)}"><meta property="og:image:secure_url" content="${esc(img)}"><meta property="og:image:type" content="${meta.preview ? "image/jpeg" : "image/png"}">
+${meta.preview && meta.pw && meta.ph ? `<meta property="og:image:width" content="${meta.pw}"><meta property="og:image:height" content="${meta.ph}">` : ""}<meta property="og:image:alt" content="Order image: design preview and order details">
+<meta name="twitter:image" content="${esc(img)}"><meta property="og:url" content="${esc(url.origin + url.pathname)}">
 <meta name="twitter:card" content="summary_large_image">
 <style>
 :root{color-scheme:light}body{margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:#F3F4F6;color:#0D0E12}

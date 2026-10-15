@@ -563,18 +563,20 @@
      the link's preview (the order image) inside the same message. */
   // the free order store keeps files up to 10 MB each; bigger print sheets stay on the device
   const UPLOAD_MAX_FILES = 29, UPLOAD_MAX_BYTES = 60 * 1024 * 1024, UPLOAD_MAX_EACH = 10 * 1024 * 1024;
-  async function previewJPEG(card) { // small image for link previews
-    const bm = await createImageBitmap(card), w = Math.min(1200, bm.width), h = Math.round(bm.height * w / bm.width);
+  async function previewJPEG(card) { // small image for link previews (800 px loads fast enough for WhatsApp)
+    const bm = await createImageBitmap(card), w = Math.min(800, bm.width), h = Math.round(bm.height * w / bm.width);
     const c = document.createElement("canvas"); c.width = w; c.height = h;
     const x = c.getContext("2d"); x.fillStyle = "#FFFFFF"; x.fillRect(0, 0, w, h); x.drawImage(bm, 0, 0, w, h);
     const b = await new Promise(r => c.toBlob(r, "image/jpeg", 0.82));
-    return new File([b], "preview.jpg", { type: "image/jpeg" });
+    const f = new File([b], "preview.jpg", { type: "image/jpeg" });
+    f.w = w; f.h = h;
+    return f;
   }
   async function uploadOrder(text, files, onProgress) {
     const fd = new FormData();
     fd.append("text", text);
     fd.append("card", files[0], files[0].name);
-    try { const p = await previewJPEG(files[0]); fd.append("preview", p, p.name); } catch { }
+    try { const p = await previewJPEG(files[0]); fd.append("preview", p, p.name); fd.append("pw", p.w); fd.append("ph", p.h); } catch { }
     let total = files[0].size, n = 0;
     for (const f of files.slice(1)) {
       if (n >= UPLOAD_MAX_FILES || f.size > UPLOAD_MAX_EACH || total + f.size > UPLOAD_MAX_BYTES) continue;
