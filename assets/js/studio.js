@@ -1,8 +1,8 @@
 /* TRENDLI9 — Design Studio
-   SVG mockup + draggable artwork/text layers per side,
-   live bulk pricing, PNG mockup export, add to WhatsApp order. */
+   SVG mockup + draggable artwork/text layers per side, fixed print sizes
+   (2×2 / 3×3 / 4×4 in), PNG mockup export, add to WhatsApp order (quoted there, no prices). */
 (function () {
-  const { $, $$, esc, money, cart, priceLine, tierFor, openWA, toast, reduceMotion } = window.T9;
+  const { $, $$, esc, cart, openWA, toast } = window.T9;
   const CAT = window.T9_CATALOG, MK = window.T9_MOCKUPS, I = window.T9_ICON, C = window.T9_CONFIG;
   const products = CAT.PRODUCTS.filter(p => p.custom);
   const params = new URLSearchParams(location.search);
@@ -14,6 +14,9 @@
   };
   let uid = 0;
   const canvas = $("#canvas");
+  // print sizes offered (inches, square box: the design's longer side matches it)
+  const INCHES = [2, 3, 4], DEF_IN = 4;
+  const ppi = side => { const a = MK.areaFor(S.product.mockup, side); return a.w / a.inW; };
 
   /* ---------- product + colour pickers ---------- */
   $("#prodPick").innerHTML = products.map(p => `<button type="button" data-pid="${p.id}" aria-pressed="${p === S.product}">${MK.svg(p.mockup, { color: "#16161A", label: "" })}<span>${esc(p.name.replace(/(Premium |Classic |Pullover |Crew Neck |Printed |Canvas |Baseball |& Service )/g, ""))}</span></button>`).join("");
@@ -26,10 +29,10 @@
     // keep designs valid for the new product: drop back layers if unsupported, re-centre into the new print area
     if (!S.product.areas.find(a => a.id === "back") && S.layers.back.length) { S.layers.back = []; toast("Back design removed — this product prints on the front only"); }
     ["front", "back"].forEach(side => S.layers[side].forEach(L => { const a = MK.areaFor(S.product.mockup, side); L.x = a.x + a.w / 2; L.y = a.y + a.h / 2;
-      if (L.type === "image") { L.w = L.base = Math.min(L.w, a.w * .8, a.h * .8 / L.ar); } }));
+      if (L.type === "image") sizeImage(L, side); }));
     S.selected = null; S.sizes = {}; S.extra.clear();
     history.replaceState(null, "", `studio.html?p=${S.product.id}`);
-    renderColors(); renderSizes(); renderSideBtns(); draw(); price();
+    renderColors(); renderSizes(); renderSideBtns(); draw(); fitTexts(); summary();
   });
   function renderColors() {
     const p = S.product;
@@ -42,7 +45,7 @@
     const hasBack = !!S.product.areas.find(a => a.id === "back");
     $$("[data-side]").forEach(b => { b.hidden = b.dataset.side === "back" && !hasBack; b.setAttribute("aria-pressed", b.dataset.side === S.side); });
   }
-  $$("[data-side]").forEach(b => b.addEventListener("click", () => { S.side = b.dataset.side; S.selected = null; renderSideBtns(); draw(); }));
+  $$("[data-side]").forEach(b => b.addEventListener("click", () => { S.side = b.dataset.side; S.selected = null; renderSideBtns(); draw(); fitTexts(); }));
   $("#guideBtn").addEventListener("click", e => { S.guides = !S.guides; e.currentTarget.setAttribute("aria-pressed", S.guides); draw(); });
 
   /* ---------- sizes / extra areas ---------- */
@@ -50,30 +53,37 @@
     const p = S.product;
     $("#sizeGrid").innerHTML = p.sizes.map(s => `<label class="size-cell">${s}<input type="number" min="0" inputmode="numeric" data-size="${s}" value="${S.sizes[s] || 0}" aria-label="Quantity for size ${s}"></label>`).join("");
     const extras = p.areas.filter(a => !["front", "back"].includes(a.id));
-    $("#extraAreas").innerHTML = extras.length ? extras.map(a => `<label class="opt"><input type="checkbox" value="${a.id}" ${S.extra.has(a.id) ? "checked" : ""}><span>${a.name} +${money(a.add)}</span></label>`).join("") : `<span class="help">Not available for this product.</span>`;
+    $("#extraAreas").innerHTML = extras.length ? extras.map(a => `<label class="opt"><input type="checkbox" value="${a.id}" ${S.extra.has(a.id) ? "checked" : ""}><span>${a.name}</span></label>`).join("") : `<span class="help">Not available for this product.</span>`;
     $("#extraAreas").closest(".field").hidden = !extras.length;
   }
-  $("#sizeGrid").addEventListener("input", e => { const n = Math.max(0, parseInt(e.target.value) || 0); if (n) S.sizes[e.target.dataset.size] = n; else delete S.sizes[e.target.dataset.size]; price(); });
-  $("#extraAreas").addEventListener("change", e => { e.target.checked ? S.extra.add(e.target.value) : S.extra.delete(e.target.value); price(); });
+  $("#sizeGrid").addEventListener("input", e => { const n = Math.max(0, parseInt(e.target.value) || 0); if (n) S.sizes[e.target.dataset.size] = n; else delete S.sizes[e.target.dataset.size]; summary(); });
+  $("#extraAreas").addEventListener("change", e => { e.target.checked ? S.extra.add(e.target.value) : S.extra.delete(e.target.value); summary(); });
 
   /* ---------- layers ---------- */
   const area = () => MK.areaFor(S.product.mockup, S.side);
   const cur = () => S.layers[S.side];
   const sel = () => cur().find(l => l.id === S.selected);
 
+  // scale a layer so its longer side is L.inch inches on this product
+  function sizeImage(L, side = S.side) { L.w = L.inch * ppi(side) / Math.max(1, L.ar); }
+  function sizeText(L, side = S.side) {
+    const g = canvas.querySelector(`[data-id="${L.id}"]`); if (!g) return;
+    const bb = g.getBBox(), long = Math.max(bb.width, bb.height); if (long) L.size *= L.inch * ppi(side) / long;
+  }
+  // text on the side being viewed is measured from the live SVG; redraw once it is resized
+  function fitTexts() { const ts = cur().filter(L => L.type === "text"); if (!ts.length) return; ts.forEach(L => sizeText(L)); draw(); }
   function addImage(src, natW, natH, name) {
-    const a = area(), fit = Math.min(a.w * .8 / natW, a.h * .8 / natH);
-    const L = { id: "L" + (++uid), type: "image", src, name, ar: natH / natW, w: natW * fit, x: a.x + a.w / 2, y: a.y + a.h / 2, rot: 0, base: natW * fit };
-    cur().push(L); S.selected = L.id; S.dirty = true; draw(); price();
+    const a = area();
+    const L = { id: "L" + (++uid), type: "image", src, name, ar: natH / natW, inch: DEF_IN, x: a.x + a.w / 2, y: a.y + a.h / 2, rot: 0 };
+    sizeImage(L); cur().push(L); S.selected = L.id; S.dirty = true; draw(); summary();
   }
   function addText(text) {
     const a = area();
-    const L = { id: "L" + (++uid), type: "text", text, font: "Unbounded", color: MK.isDark(S.product.colors[S.colorIdx].hex) ? "#FFC400" : "#E5007E", size: Math.min(34, a.w / Math.max(4, text.length) * 1.6), x: a.x + a.w / 2, y: a.y + a.h * .3, rot: 0 };
-    L.base = L.size; cur().push(L); S.selected = L.id; S.dirty = true; draw();
-    // auto-fit: shrink so the text spans at most 85% of the print width
-    const bb = canvas.querySelector(`[data-id="${L.id}"]`)?.getBBox();
-    if (bb && bb.width > a.w * .85) { L.size = L.base = L.size * a.w * .85 / bb.width; draw(); }
-    price();
+    const L = { id: "L" + (++uid), type: "text", text, font: "Unbounded", color: MK.isDark(S.product.colors[S.colorIdx].hex) ? "#FFC400" : "#E5007E", size: 20, inch: DEF_IN, x: a.x + a.w / 2, y: a.y + a.h * .3, rot: 0 };
+    cur().push(L); S.selected = L.id; S.dirty = true; draw();
+    sizeText(L); draw(); summary();
+    // measure again once the font has loaded (the fallback font has different widths)
+    document.fonts?.load(`700 20px '${L.font}'`).then(() => { if (cur().includes(L)) { sizeText(L); draw(); } });
   }
 
   function layerSVG(L) {
@@ -92,32 +102,38 @@
       svg.insertAdjacentHTML("beforeend", `<g transform="translate(${L.x} ${L.y}) rotate(${L.rot})" pointer-events="none"><rect x="${bb.x - 4}" y="${bb.y - 4}" width="${bb.width + 8}" height="${bb.height + 8}" fill="none" stroke="#E5007E" stroke-width="1.5" stroke-dasharray="5 4" rx="3"/><circle cx="${bb.x - 4}" cy="${bb.y - 4}" r="4" fill="#E5007E"/><circle cx="${bb.x + bb.width + 4}" cy="${bb.y + bb.height + 4}" r="4" fill="#E5007E"/></g>`);
     }
     renderLayerList(); renderCtrl();
-    $("#hint").textContent = cur().length ? "Drag to move · use the sliders to resize & rotate · arrow keys nudge" : `Upload artwork or add text for the ${S.side} — then drag to position inside the dashed area.`;
+    $("#hint").textContent = cur().length ? "Drag to move · pick a print size · arrow keys nudge" : `Upload artwork or add text for the ${S.side} — then drag to position inside the dashed area.`;
   }
 
   function renderLayerList() {
-    $("#layerList").innerHTML = cur().map(L => `<button type="button" class="layer-item" data-lid="${L.id}" aria-pressed="${L.id === S.selected}">${L.type === "image" ? `<img src="${L.src}" alt="">` : `<span style="width:30px;text-align:center">${I("type")}</span>`}<span class="t">${esc(L.type === "image" ? L.name : `"${L.text}"`)}</span></button>`).join("")
+    $("#layerList").innerHTML = cur().map(L => `<button type="button" class="layer-item" data-lid="${L.id}" aria-pressed="${L.id === S.selected}">${L.type === "image" ? `<img src="${L.src}" alt="">` : `<span style="width:30px;text-align:center">${I("type")}</span>`}<span class="t">${esc(L.type === "image" ? L.name : `"${L.text}"`)} · ${L.inch}×${L.inch} in</span></button>`).join("")
       + (S.layers[S.side === "front" ? "back" : "front"].length ? `<p class="note" style="margin:4px 0 0">${S.side === "front" ? "Back" : "Front"} also has ${S.layers[S.side === "front" ? "back" : "front"].length} layer(s).</p>` : "");
   }
   $("#layerList").addEventListener("click", e => { const b = e.target.closest("[data-lid]"); if (b) { S.selected = b.dataset.lid; draw(); } });
 
   function renderCtrl() {
     const L = sel(); $("#layerCtrl").hidden = !L; if (!L) return;
-    const pct = Math.round((L.type === "image" ? L.w : L.size) / L.base * 100);
-    $("#cSize").value = pct; $("#oSize").textContent = pct + "%";
+    $$("#cSize [data-in]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.in === L.inch));
     $("#cRot").value = L.rot; $("#oRot").textContent = L.rot + "°";
     $("#textCtrl").hidden = L.type !== "text";
     if (L.type === "text") { $("#cText").value = L.text; $("#cFont").value = L.font; $("#cColor").value = L.color; }
   }
   const patch = (fn, redraw = true) => { const L = sel(); if (!L) return; fn(L); S.dirty = true; if (redraw) draw(); };
-  $("#cSize").addEventListener("input", e => patch(L => { const f = e.target.value / 100; if (L.type === "image") L.w = L.base * f; else L.size = L.base * f; }));
+  $("#cSize").innerHTML = INCHES.map(n => `<button type="button" data-in="${n}" aria-pressed="false">${n}×${n} in</button>`).join("");
+  $("#cSize").addEventListener("click", e => {
+    const b = e.target.closest("[data-in]"); if (!b) return;
+    patch(L => { L.inch = +b.dataset.in; if (L.type === "image") sizeImage(L); else sizeText(L); });
+    summary();
+  });
   $("#cRot").addEventListener("input", e => patch(L => { L.rot = +e.target.value; }));
-  $("#cText").addEventListener("input", e => patch(L => { L.text = e.target.value || " "; }));
-  $("#cFont").addEventListener("change", e => patch(L => { L.font = e.target.value; }));
+  // text edits keep the chosen print size
+  const refit = () => { const L = sel(); if (L) { sizeText(L); draw(); } };
+  $("#cText").addEventListener("input", e => { patch(L => { L.text = e.target.value || " "; }); refit(); });
+  $("#cFont").addEventListener("change", e => { patch(L => { L.font = e.target.value; }); refit(); document.fonts?.load(`700 20px '${e.target.value}'`).then(refit); });
   $("#cColor").addEventListener("input", e => patch(L => { L.color = e.target.value; }));
   $("#bCenter").addEventListener("click", () => patch(L => { const a = area(); L.x = a.x + a.w / 2; L.y = a.y + a.h / 2; }));
-  $("#bDup").addEventListener("click", () => { const L = sel(); if (!L) return; const c = { ...L, id: "L" + (++uid), x: L.x + 12, y: L.y + 12 }; cur().push(c); S.selected = c.id; draw(); price(); });
-  $("#bDel").addEventListener("click", () => { const L = sel(); if (!L) return; S.layers[S.side] = cur().filter(x => x !== L); S.selected = null; draw(); price(); });
+  $("#bDup").addEventListener("click", () => { const L = sel(); if (!L) return; const c = { ...L, id: "L" + (++uid), x: L.x + 12, y: L.y + 12 }; cur().push(c); S.selected = c.id; draw(); summary(); });
+  $("#bDel").addEventListener("click", () => { const L = sel(); if (!L) return; S.layers[S.side] = cur().filter(x => x !== L); S.selected = null; draw(); summary(); });
 
   /* ---------- drag (pointer events, works with touch) ---------- */
   let drag = null;
@@ -179,7 +195,7 @@
   $("#addTxt").addEventListener("click", () => { const v = $("#txt").value.trim(); if (!v) { $("#txt").focus(); return; } addText(v); $("#txt").value = ""; });
   $("#txt").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("#addTxt").click(); } });
 
-  /* ---------- pricing ---------- */
+  /* ---------- order summary (no prices: quoted on WhatsApp) ---------- */
   function areasUsed() {
     const ids = [], ok = id => S.product.areas.some(a => a.id === id);
     if (S.layers.front.length || !S.layers.back.length) ids.push("front");
@@ -187,22 +203,16 @@
     S.extra.forEach(id => ids.push(id));
     return ids.filter(ok);
   }
-  function price() {
+  function summary() {
     const p = S.product, qty = Object.values(S.sizes).reduce((a, b) => a + b, 0), ids = areasUsed();
-    const pl = priceLine({ product: p, qty: Math.max(1, qty), areas: ids });
     const names = ids.map(id => p.areas.find(a => a.id === id).name);
-    const tier = tierFor(qty), next = CAT.TIERS.find(t => t.min > qty);
     $("#summary").innerHTML = `
-      <div class="summary-line"><span>${esc(p.name)}</span><span>${money(p.price)}</span></div>
-      ${ids.filter(i => i !== "front").map(i => { const a = p.areas.find(x => x.id === i); return `<div class="summary-line"><span>+ ${a.name} print</span><span>${money(a.add)}</span></div>`; }).join("")}
-      <div class="summary-line"><span>Per piece</span><b>${money(pl.unit)}</b></div>
+      <div class="summary-line"><span>Product</span><span>${esc(p.name)}</span></div>
+      <div class="summary-line"><span>Print</span><span>${esc(names.join(", "))}</span></div>
       <div class="summary-line"><span>Quantity</span><span>${qty || "—"}</span></div>
-      ${pl.off && qty ? `<div class="summary-line" style="color:var(--success)"><span>Bulk discount</span><b>−${pl.off * 100}%</b></div>` : ""}
-      <div class="summary-line total"><span>Estimated total</span><span>${qty ? money(pl.total) : "—"}</span></div>`;
-    const idx = CAT.TIERS.indexOf(tier);
-    $$("#tierBar span").forEach((s, i) => s.classList.toggle("on", i < idx));
-    $("#tierNote").textContent = !qty ? "Enter quantities per size to see your total." : next ? `Add ${next.min - qty} more for ${next.off * 100}% off.` : "Maximum bulk discount unlocked 🎉";
-    return { qty, pl, names };
+      <div class="summary-line total"><span>Price</span><span>Quote on WhatsApp</span></div>`;
+    $("#tierNote").textContent = qty ? "Send your design and our team replies with a quote." : "Enter quantities per size, then send your design for a quote.";
+    return { qty, names };
   }
 
   /* ---------- export mockup PNG (canvas) ---------- */
@@ -242,18 +252,18 @@
     const parts = [];
     ["front", "back"].forEach(s => {
       const ls = S.layers[s]; if (!ls.length) return;
-      parts.push(`${s}: ` + ls.map(L => L.type === "image" ? `artwork "${L.name}"` : `text "${L.text}" (${L.font}, ${L.color})`).join(" + "));
+      parts.push(`${s}: ` + ls.map(L => (L.type === "image" ? `artwork "${L.name}"` : `text "${L.text}" (${L.font}, ${L.color})`) + ` ${L.inch}×${L.inch} in`).join(" + "));
     });
     return parts.join(" | ") || "Artwork to be shared";
   }
   function buildItem() {
-    const r = price(), p = S.product, c = p.colors[S.colorIdx];
+    const r = summary(), p = S.product, c = p.colors[S.colorIdx];
     return { productId: p.id, name: p.name, mockup: p.mockup, color: c.name, colorHex: c.hex, sizes: { ...S.sizes }, qty: r.qty, unit: "pcs",
-      areas: r.names, total: r.pl.total, design: designSummary(), notes: $("#notes").value.trim(),
+      areas: r.names, total: null, design: designSummary(), notes: $("#notes").value.trim(),
       hasArtwork: S.layers.front.concat(S.layers.back).some(L => L.type === "image") };
   }
   function needQty() {
-    if (price().qty) return false;
+    if (summary().qty) return false;
     toast("Enter the quantity for at least one size"); $("#sizeGrid input").focus(); return true;
   }
   $("#addOrder").addEventListener("click", async () => {
@@ -281,7 +291,7 @@
     if (needQty()) return;
     const i = buildItem(); S.dirty = false;
     const text = [`Hi Trendli9! I designed this in your Design Studio:`, ``, `*${i.name}* — ${i.color}`, `Sizes: ${Object.entries(i.sizes).map(([s, q]) => `${s}×${q}`).join(", ")} (${i.qty} pcs)`,
-      `Print: ${i.areas.join(", ")}`, `Design: ${i.design}`, i.notes ? `Notes: ${i.notes}` : null, `Est.: ${money(i.total)}`, ``, `My mockup and artwork files are attached.`].filter(x => x !== null).join("\n");
+      `Print: ${i.areas.join(", ")}`, `Design: ${i.design}`, i.notes ? `Notes: ${i.notes}` : null, ``, `My mockup and artwork files are attached. Please share a quote.`].filter(x => x !== null).join("\n");
     // one order card (mockups + this text) leads the files, so the studio sees design and details together
     const getFiles = async () => {
       const files = await orderFiles();
@@ -293,6 +303,6 @@
   addEventListener("beforeunload", e => { if (S.dirty && (S.layers.front.length || S.layers.back.length)) { e.preventDefault(); e.returnValue = ""; } });
 
   /* ---------- init ---------- */
-  renderColors(); renderSizes(); renderSideBtns(); draw(); price();
-  document.fonts?.ready.then(() => draw());
+  renderColors(); renderSizes(); renderSideBtns(); draw(); summary();
+  document.fonts?.ready.then(() => { draw(); fitTexts(); });
 })();

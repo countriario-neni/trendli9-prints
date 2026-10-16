@@ -9,13 +9,12 @@
    ========================================================= */
 (function () {
   "use strict";
-  const T9 = window.T9, C = window.T9_CONFIG;
+  const T9 = window.T9;
   if (!T9) return;
-  const { $, esc, money, toast } = T9;
+  const { $, esc, toast } = T9;
   const I = window.T9_ICON;
 
   const SHEET_W = 22, SHEET_H = 39, DPI = 300;           // inches · print resolution
-  const PRICE_M = C.dtfPricePerMeter || 250;             // each 39 in sheet is billed as 1 metre
   const SIZE_MIN = 0.25, W_MAX = 21.5, H_MAX = SHEET_H - 0.5;
   const GAP_MAX = 2, MARGIN_MAX = 1, COPIES_MAX = 2000, MAX_BYTES = 100 * 1024 * 1024;
   const IMPORT_KEY = "t9_gangsheet_import";
@@ -210,8 +209,7 @@
     const area = sheets.reduce((s, sh) => s + sh.reduce((a, p) => a + (p.w - g) * (p.h - g), 0), 0);
     return {
       m, g, sheets, oversize, prints, per, ms: performance.now() - t0,
-      eff: sheets.length ? area / (sheets.length * SHEET_W * SHEET_H) * 100 : 0,
-      price: sheets.length * PRICE_M
+      eff: sheets.length ? area / (sheets.length * SHEET_W * SHEET_H) * 100 : 0
     };
   }
 
@@ -613,10 +611,8 @@
       row("Sheets", n || "—") +
       row("Copies", prints) +
       row("Fill efficiency", n ? `${Math.round(L.eff)}%` : "—") +
-      row("Estimated price", money(n * PRICE_M), "gs-price");
-    $("#gsPriceNote").textContent = n
-      ? `Estimated price ${money(L.price)} · ${plural(n, "sheet")} · from ${money(PRICE_M)} per metre — final price confirmed on WhatsApp.`
-      : `From ${money(PRICE_M)} per metre — each 22 × 39 in sheet is billed as 1 metre. Final price confirmed on WhatsApp.`;
+      row("Price", "Quote on WhatsApp", "gs-price");
+    $("#gsPriceNote").textContent = "Send your sheets on WhatsApp and our team replies with a quote.";
     $("#gsBig").textContent = `${plural(n, "sheet")} · ${SHEET_W} × ${SHEET_H} in`;
     $("#gsTotal").textContent = `${plural(prints, "copy", "copies")} · ${plural(n, "sheet")}`;
     $("#gsMeta").textContent = n ? `Tap a sheet to see it big · ${plural(prints, "print")} · ${Math.round(L.eff)}% of the film used` : "";
@@ -922,7 +918,7 @@
       productId: "dtf-gang-sheet", name: "DTF Gang Sheet", img: "svc-dtf",
       qty: n, unit: "sheet",
       variant: `${SHEET_W} × ${SHEET_H} in · ${L.prints} prints`,
-      total: L.price, hasArtwork: true,
+      total: null, hasArtwork: true,
       notes: summaryLines(L).join("; "),
       thumb: thumbDataURL(L)
     }, files);
@@ -944,10 +940,10 @@
       `Sheet size: ${SHEET_W} × ${SHEET_H} in (vertical) · Sheets: ${L.sheets.length}`,
       "Designs:",
       ...Array.from(perDesign(L), ([d, n]) => `• ${d.name} — ${plural(n, "copy", "copies")} @ ${f2(d.wIn)} × ${f2(d.hIn)} in (${dpiNote(d)})`),
-      `Estimated price: ${money(L.price)} (from ${money(PRICE_M)} per metre — to be confirmed)`,
       `Customer type: ${ctype}`,
       `Notes: ${notes || "—"}`,
-      `Files: ${plural(L.sheets.length, "print sheet")} (${SHEET_W} × ${SHEET_H} in, ${DPI} DPI PNG) + ${plural(nOrig, "original design")}`
+      `Files: ${plural(L.sheets.length, "print sheet")} (${SHEET_W} × ${SHEET_H} in, ${DPI} DPI PNG) + ${plural(nOrig, "original design")}`,
+      "Please share a quote."
     ].join("\n");
   }
   function originals(L) {
@@ -1010,7 +1006,7 @@
   }
   function readyOrder() {
     const L = state.layout; if (!L || !L.prints) return;
-    $("#gsOrdSum").textContent = `${plural(L.sheets.length, "sheet")} · ${SHEET_W} × ${SHEET_H} in · ${plural(L.prints, "copy", "copies")} · estimated ${money(L.price)}`;
+    $("#gsOrdSum").textContent = `${plural(L.sheets.length, "sheet")} · ${SHEET_W} × ${SHEET_H} in · ${plural(L.prints, "copy", "copies")}`;
     ordSend.disabled = true;
     prepareFiles(L).then(files => {
       // the layout changed meanwhile (e.g. a size field committed on blur): prepare the current one
@@ -1126,7 +1122,7 @@
       const saved = L.sheets.length - res.sheets.length;
       if (saved <= 0 || res.sheets.flat().length !== all.length) { nestNote("No saving, kept box layout."); return; }
       const N = state.layout = {
-        ...L, shape: true, eff: L.eff * L.sheets.length / res.sheets.length, price: res.sheets.length * PRICE_M,
+        ...L, shape: true, eff: L.eff * L.sheets.length / res.sheets.length,
         sheets: res.sheets.map(sh => sh.map(q => {
           const d = refs[q.d];
           return { x: q.x * CELL, y: q.y * CELL, w: (q.rot ? d.hIn : d.wIn) + L.g, h: (q.rot ? d.wIn : d.hIn) + L.g, rot: q.rot, ref: d };

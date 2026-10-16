@@ -1,8 +1,7 @@
 /* =========================================================
    TRENDLI9 PRINTS — Services & product catalogue
-   Prices are INDICATIVE "starting from" values (incl. one DTF print)
-   and are confirmed by the team on WhatsApp. Edit freely.
-   price: null  => shown as "Get price" (quote on WhatsApp)
+   No prices are shown on the site: every product and service is
+   quoted by the team on WhatsApp (client request, 2026-10-16).
    ========================================================= */
 (function () {
   const APPAREL_COLORS = [
@@ -19,18 +18,12 @@
   const ADULT_SIZES = ["XS", "S", "M", "L", "XL", "2XL", "3XL"];
   const KID_SIZES = ["2-3Y", "4-5Y", "6-7Y", "8-9Y", "10-11Y", "12-13Y"];
 
-  // Extra print locations (DTF), added per piece
+  // Print locations (DTF)
   const PRINT_AREAS = [
-    { id: "front", name: "Front", add: 0 },
-    { id: "back", name: "Back", add: 120 },
-    { id: "lsleeve", name: "Left sleeve", add: 50 },
-    { id: "rsleeve", name: "Right sleeve", add: 50 }
-  ];
-
-  // Bulk pricing tiers (discount on garment subtotal)
-  const TIERS = [
-    { min: 1, off: 0 }, { min: 10, off: 0.05 }, { min: 25, off: 0.10 },
-    { min: 50, off: 0.15 }, { min: 100, off: 0.20 }
+    { id: "front", name: "Front" },
+    { id: "back", name: "Back" },
+    { id: "lsleeve", name: "Left sleeve" },
+    { id: "rsleeve", name: "Right sleeve" }
   ];
 
   const CATEGORIES = [
@@ -45,91 +38,91 @@
 
   const PRODUCTS = [
     // ---------- Apparel ----------
-    { id: "classic-tee", photo: "p-classic-tee", cat: "apparel", name: "Classic Crew T-Shirt", mockup: "tee", price: 349, unit: "piece",
+    { id: "classic-tee", photo: "p-classic-tee", cat: "apparel", name: "Classic Crew T-Shirt", mockup: "tee", unit: "piece",
       desc: "180 GSM 100% combed cotton, bio-washed, regular fit. The everyday canvas for brands, events and teams.",
       colors: APPAREL_COLORS, sizes: ADULT_SIZES, areas: PRINT_AREAS, custom: true, badge: "Bestseller", minQty: 1 },
-    { id: "oversized-tee", photo: "p-oversized-tee", cat: "apparel", name: "Oversized Drop-Shoulder Tee", mockup: "tee", price: 449, unit: "piece",
+    { id: "oversized-tee", photo: "p-oversized-tee", cat: "apparel", name: "Oversized Drop-Shoulder Tee", mockup: "tee", unit: "piece",
       desc: "240 GSM heavyweight cotton, relaxed streetwear fit. Built for statement back prints.",
       colors: APPAREL_COLORS.slice(0, 10), sizes: ADULT_SIZES.slice(1), areas: PRINT_AREAS, custom: true, badge: "Trending", minQty: 1 },
-    { id: "polo", photo: "p-polo", cat: "apparel", name: "Premium Polo T-Shirt", mockup: "polo", price: 499, unit: "piece",
+    { id: "polo", photo: "p-polo", cat: "apparel", name: "Premium Polo T-Shirt", mockup: "polo", unit: "piece",
       desc: "220 GSM honeycomb pique with ribbed collar. Ideal for corporate, staff and team uniforms.",
       colors: BASIC_COLORS, sizes: ADULT_SIZES, areas: PRINT_AREAS, custom: true, minQty: 1 },
-    { id: "hoodie", photo: "p-hoodie", cat: "apparel", name: "Pullover Hoodie", mockup: "hoodie", price: 899, unit: "piece",
+    { id: "hoodie", photo: "p-hoodie", cat: "apparel", name: "Pullover Hoodie", mockup: "hoodie", unit: "piece",
       desc: "320 GSM fleece-lined cotton blend with kangaroo pocket and drawcords.",
       colors: BASIC_COLORS, sizes: ADULT_SIZES, areas: PRINT_AREAS, custom: true, badge: "Winter pick", minQty: 1 },
-    { id: "sweatshirt", photo: "p-sweatshirt", cat: "apparel", name: "Crew Neck Sweatshirt", mockup: "sweatshirt", price: 749, unit: "piece",
+    { id: "sweatshirt", photo: "p-sweatshirt", cat: "apparel", name: "Crew Neck Sweatshirt", mockup: "sweatshirt", unit: "piece",
       desc: "300 GSM brushed fleece, ribbed cuffs and hem. Clean canvas for chest and back prints.",
       colors: BASIC_COLORS, sizes: ADULT_SIZES, areas: PRINT_AREAS, custom: true, minQty: 1 },
-    { id: "kids-tee", photo: "p-kids-tee", cat: "apparel", name: "Kids T-Shirt", mockup: "tee", price: 299, unit: "piece",
+    { id: "kids-tee", photo: "p-kids-tee", cat: "apparel", name: "Kids T-Shirt", mockup: "tee", unit: "piece",
       desc: "Soft 160 GSM cotton with skin-friendly, stretchable DTF prints. Birthday & school favourite.",
       colors: APPAREL_COLORS, sizes: KID_SIZES, areas: PRINT_AREAS.slice(0, 2), custom: true, minQty: 1 },
 
     // ---------- Saree & Ethnic ----------
-    { id: "saree-print", cat: "ethnic", name: "Saree Motif & Border Printing", img: "svc-saree", price: null, unit: "saree",
+    { id: "saree-print", cat: "ethnic", name: "Saree Motif & Border Printing", img: "svc-saree", unit: "saree",
       desc: "Vibrant DTF motifs, pallu art and borders printed onto your saree — silk, georgette, chiffon, cotton.",
       custom: false, quote: true, minQty: 1 },
-    { id: "blouse-print", cat: "ethnic", name: "Designer Blouse Printing", img: "g-blouse", price: 299, unit: "blouse",
+    { id: "blouse-print", cat: "ethnic", name: "Designer Blouse Printing", img: "g-blouse", unit: "blouse",
       desc: "Neckline, back and sleeve artwork with fine detail on ready or unstitched blouse fabric.",
       custom: false, quote: true, minQty: 1 },
-    { id: "boutique-job", cat: "ethnic", name: "Boutique Garment Job Work", img: "svc-dtf", price: null, unit: "lot",
+    { id: "boutique-job", cat: "ethnic", name: "Boutique Garment Job Work", img: "svc-dtf", unit: "lot",
       desc: "Kurtis, lehengas, dupattas and kidswear — send your garments, we print and return pressed.",
       custom: false, quote: true, minQty: 5 },
 
     // ---------- Bags & Caps ----------
-    { id: "cap", photo: "p-cap", cat: "accessories", name: "Baseball Cap", mockup: "cap", price: 299, unit: "piece",
+    { id: "cap", photo: "p-cap", cat: "accessories", name: "Baseball Cap", mockup: "cap", unit: "piece",
       desc: "6-panel cotton twill cap with adjustable strap. Front DTF logo print.",
       colors: BASIC_COLORS, sizes: ["Free size"], areas: [PRINT_AREAS[0]], custom: true, minQty: 1 },
-    { id: "tote", photo: "p-tote", cat: "accessories", name: "Canvas Tote Bag", mockup: "tote", price: 249, unit: "piece",
+    { id: "tote", photo: "p-tote", cat: "accessories", name: "Canvas Tote Bag", mockup: "tote", unit: "piece",
       desc: "12 oz natural canvas, 15 × 16.5 in with long handles. Perfect for events, boutiques and merch.",
       colors: NATURAL, sizes: ["15 × 16.5 in"], areas: PRINT_AREAS.slice(0, 2), custom: true, badge: "Eco", minQty: 1 },
 
     // ---------- Home Décor ----------
-    { id: "cushion", photo: "p-cushion", cat: "home", name: "Printed Cushion Cover", mockup: "cushion", price: 299, unit: "piece",
+    { id: "cushion", photo: "p-cushion", cat: "home", name: "Printed Cushion Cover", mockup: "cushion", unit: "piece",
       desc: "16×16 in poly-canvas cover with concealed zip. Photos, patterns, names — edge to edge.",
       colors: [{ name: "White", hex: "#F7F7F5" }, { name: "Natural", hex: "#EFE6D2" }, { name: "Grey Melange", hex: "#A9ABAE" }],
       sizes: ["16 × 16 in", "18 × 18 in"], areas: [PRINT_AREAS[0]], custom: true, minQty: 1 },
-    { id: "decor-fabric", cat: "home", name: "Home Décor Fabric Printing", img: "svc-decor", price: null, unit: "piece",
+    { id: "decor-fabric", cat: "home", name: "Home Décor Fabric Printing", img: "svc-decor", unit: "piece",
       desc: "Table runners, curtains, wall tapestries and upholstery panels printed to your theme.",
       custom: false, quote: true, minQty: 1 },
 
     // ---------- Hotel & Uniform ----------
     // a printing service: we print on the customer's aprons but don't sell aprons
-    { id: "apron", photo: "p-apron", cat: "uniform", name: "Apron Printing", price: null, unit: "piece",
+    { id: "apron", photo: "p-apron", cat: "uniform", name: "Apron Printing", unit: "piece",
       desc: "We print your logo or design on your aprons — chef, café, hotel and service aprons, single piece to bulk.",
       custom: false, quote: true, enquiry: true, minQty: 1 },
-    { id: "hotel-branding", cat: "uniform", name: "Hotel Branding Transfers", img: "svc-hotel", price: null, unit: "lot",
+    { id: "hotel-branding", cat: "uniform", name: "Hotel Branding Transfers", img: "svc-hotel", unit: "lot",
       desc: "Crest and logo transfers for chef coats, staff uniforms, linens, pillow covers and amenity bags.",
       custom: false, quote: true, minQty: 10 },
-    { id: "uniform-print", cat: "uniform", name: "School & Staff Uniform Printing", img: "svc-bulk", price: null, unit: "lot",
+    { id: "uniform-print", cat: "uniform", name: "School & Staff Uniform Printing", img: "svc-bulk", unit: "lot",
       desc: "Logos, names and numbers on shirts, jerseys and jackets for schools, hospitals and offices.",
       custom: false, quote: true, minQty: 10 },
 
     // ---------- DTF Transfers ----------
-    { id: "dtf-gang-sheet", cat: "dtf", name: "DTF Gang Sheet — 22 × 39 in", img: "svc-dtf", price: 250, unit: "sheet",
-      desc: "Send your gang sheet (22 × 39 in, portrait), billed as one metre at ₹250 per metre. Printed, powdered and cured — ready to press on any fabric.",
-      sizes: ["22 × 39 in sheet"], custom: false, badge: "₹250 / m", minQty: 1, meter: true },
-    { id: "dtf-ready", cat: "dtf", name: "Ready-to-Press DTF Transfers", img: "process-heatpress", price: 45, unit: "transfer",
+    { id: "dtf-gang-sheet", cat: "dtf", name: "DTF Gang Sheet — 22 × 39 in", img: "svc-dtf", unit: "sheet",
+      desc: "Send your gang sheet (22 × 39 in, portrait). We print, powder and cure it — ready to press on any fabric.",
+      sizes: ["22 × 39 in sheet"], custom: false, minQty: 1 },
+    { id: "dtf-ready", cat: "dtf", name: "Ready-to-Press DTF Transfers", img: "process-heatpress", unit: "transfer",
       desc: "Single designs cut to size. Press at 160 °C for 12–15 s, peel hot or cold.",
-      sizes: ["Logo (4×4 in)", "A5", "A4", "A3"], sizePrice: { "Logo (4×4 in)": 15, "A5": 30, "A4": 45, "A3": 80 },
+      sizes: ["Logo (4×4 in)", "A5", "A4", "A3"],
       custom: false, minQty: 10 },
 
     // ---------- Spares & Consumables ----------
-    { id: "dtf-ink", cat: "consumables", name: "DTF Pigment Ink (C/M/Y/K/W)", img: "svc-consumables", price: null, unit: "litre",
+    { id: "dtf-ink", cat: "consumables", name: "DTF Pigment Ink (C/M/Y/K/W)", img: "svc-consumables", unit: "litre",
       desc: "Vivid, wash-fast textile pigment inks. White ink with anti-settle formula.",
       sizes: ["Cyan", "Magenta", "Yellow", "Black", "White"], custom: false, quote: true, minQty: 1 },
-    { id: "dtf-film", icon: "layers", tile: "var(--cyan)", cat: "consumables", name: "DTF PET Film Roll", img: "svc-consumables", price: null, unit: "roll",
+    { id: "dtf-film", icon: "layers", tile: "var(--cyan)", cat: "consumables", name: "DTF PET Film Roll", img: "svc-consumables", unit: "roll",
       desc: "Hot & cold peel double-side matte film. A3 sheets, 12 in and 24 in × 328 ft rolls.",
       sizes: ["A3 sheets (100)", "12 in × 328 ft", "24 in × 328 ft"], custom: false, quote: true, minQty: 1 },
-    { id: "dtf-powder", icon: "sparkle", tile: "var(--violet)", cat: "consumables", name: "Hot-Melt Adhesive Powder", img: "svc-consumables", price: null, unit: "kg",
+    { id: "dtf-powder", icon: "sparkle", tile: "var(--violet)", cat: "consumables", name: "Hot-Melt Adhesive Powder", img: "svc-consumables", unit: "kg",
       desc: "Fine / medium TPU powder for soft hand-feel and strong wash durability.",
       sizes: ["Fine 1 kg", "Medium 1 kg", "Black 1 kg"], custom: false, quote: true, minQty: 1 },
-    { id: "printhead", icon: "printer", tile: "var(--magenta)", cat: "consumables", name: "Printheads (XP600 / i3200 / L1800)", img: "svc-consumables", price: null, unit: "piece",
+    { id: "printhead", icon: "printer", tile: "var(--magenta)", cat: "consumables", name: "Printheads (XP600 / i3200 / L1800)", img: "svc-consumables", unit: "piece",
       desc: "Genuine and tested printheads for DTF printers, with installation guidance.",
       sizes: ["XP600", "i3200-A1", "L1800 / DX8"], custom: false, quote: true, minQty: 1 },
-    { id: "spares-kit", icon: "package", tile: "var(--orange)", cat: "consumables", name: "Dampers, Capping & Wiper Kit", img: "svc-consumables", price: null, unit: "kit",
+    { id: "spares-kit", icon: "package", tile: "var(--orange)", cat: "consumables", name: "Dampers, Capping & Wiper Kit", img: "svc-consumables", unit: "kit",
       desc: "Ink dampers, capping station, wiper blades, encoder strips and tubing for routine maintenance.",
       custom: false, quote: true, minQty: 1 },
-    { id: "cleaning", icon: "droplet", tile: "var(--blue)", cat: "consumables", name: "Printhead Cleaning Solution", img: "svc-consumables", price: null, unit: "500 ml",
+    { id: "cleaning", icon: "droplet", tile: "var(--blue)", cat: "consumables", name: "Printhead Cleaning Solution", img: "svc-consumables", unit: "500 ml",
       desc: "Safe flush for clogged nozzles and daily maintenance of DTF printheads.",
       custom: false, quote: true, minQty: 1 }
   ];
@@ -141,7 +134,7 @@
       title: "Transfers on demand, ready to press.",
       who: "Print shops, resellers and clothing labels who want dependable DTF output without running a printer of their own.",
       what: "We print your gang sheets or single designs, then powder, cure and pack them ready to press — or press them onto your blanks for you.",
-      jobs: ["Gang sheets at ₹250 per metre", "Ready-to-press logo to A3 transfers", "Drops on tees, oversized & hoodies", "Repeat runs from designs on file"],
+      jobs: ["Gang sheets on 22 × 39 in film", "Ready-to-press logo to A3 transfers", "Drops on tees, oversized & hoodies", "Repeat runs from designs on file"],
       wa: "I'm a T-shirt printer / clothing brand and need DTF job work.",
       link: { href: "gang-sheet.html", label: "Build a gang sheet" } },
     { id: "for-manufacturers", name: "Garment manufacturers", short: "Garment manufacturers", icon: "building", img: "p-rack-black",
@@ -162,16 +155,16 @@
       title: "Big orders, handled end to end.",
       who: "Companies, hotels, schools and event teams ordering uniforms and merch in volume.",
       what: "We work from your size sheet — names and numbers, crest transfers built for commercial laundering — and pack size-wise, with updates on WhatsApp.",
-      jobs: ["Corporate & event T-shirts", "Hotel & staff uniforms", "Chef coats, aprons & linen", "Volume pricing (indicative, up to 20% off)"],
+      jobs: ["Corporate & event T-shirts", "Hotel & staff uniforms", "Chef coats, aprons & linen", "Volume quotes on WhatsApp"],
       wa: "I have a bulk / B2B order and need a DTF printing quote.",
       link: { href: "#corporate-bulk", label: "Corporate & bulk orders" } }
   ];
 
   const SERVICES = [
-    { id: "dtf-transfer", aud: "for-printers", tag: "₹250 / metre", name: "DTF Transfer Printing", img: "svc-dtf", shop: "dtf",
+    { id: "dtf-transfer", aud: "for-printers", tag: "22 × 39 in sheets", name: "DTF Transfer Printing", img: "svc-dtf", shop: "dtf",
       short: "Complete DTF job work — gang sheets, ready-to-press transfers, any fabric.",
       long: "Our production-grade DTF line prints razor-sharp, stretchable transfers that work on cotton, polyester, blends, denim, nylon and leather. Send a gang sheet or a single design — we print, powder, cure and hand you transfers ready to press.",
-      points: ["Complete DTF transfer printing job work", "Gang sheets from ₹250 per metre", "Hot & cold peel, soft hand-feel", "Quick turnaround on standard orders"] },
+      points: ["Complete DTF transfer printing job work", "Gang sheets on 22 × 39 in film", "Hot & cold peel, soft hand-feel", "Quick turnaround on standard orders"] },
     { id: "custom-apparel", aud: "for-printers", name: "Custom Apparel Printing", img: "svc-apparel", shop: "apparel",
       short: "T-shirts, hoodies, polos and kidswear — single piece to thousands.",
       long: "Design your own merch or bring your artwork. We print on premium blanks or garments you supply, with full-colour detail, gradients and photo-quality results that survive the wash.",
@@ -190,8 +183,8 @@
       points: ["Saree & blouse printing", "Boutique & garment printing", "Works on delicate fabrics", "Exclusive designs for boutiques"] },
     { id: "corporate-bulk", aud: "for-bulk", name: "Corporate & Bulk Orders", img: "svc-bulk", shop: "apparel",
       short: "Event tees, staff uniforms and merch kits with bulk pricing.",
-      long: "From product launches to annual days, we handle sizing sheets, individual names and numbers, packing and delivery — with tiered pricing that rewards volume.",
-      points: ["Bulk & corporate T-shirt orders", "Names & numbers personalisation", "Size-wise packing", "Volume discounts up to 20% (indicative)"] },
+      long: "From product launches to annual days, we handle sizing sheets, individual names and numbers, packing and delivery — with a quote sized to your volume.",
+      points: ["Bulk & corporate T-shirt orders", "Names & numbers personalisation", "Size-wise packing", "Volume quotes on WhatsApp"] },
     { id: "hotel-branding", aud: "for-bulk", name: "Hotel Branding Transfers", img: "svc-hotel", shop: "uniform",
       short: "Crests and logos for uniforms, linens and amenities.",
       long: "Consistent brand identity across every textile touchpoint — chef coats, front-office uniforms, aprons, pillow covers and laundry bags — with transfers built for commercial laundering.",
@@ -213,5 +206,5 @@
     { img: "svc-consumables", cap: "DTF inks, film & powder", cat: "dtf", w: 1024, h: 768 }
   ];
 
-  window.T9_CATALOG = { CATEGORIES, PRODUCTS, AUDIENCES, SERVICES, PRINT_AREAS, TIERS, GALLERY };
+  window.T9_CATALOG = { CATEGORIES, PRODUCTS, AUDIENCES, SERVICES, PRINT_AREAS, GALLERY };
 })();

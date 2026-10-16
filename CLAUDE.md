@@ -18,23 +18,24 @@ Static website (HTML/CSS/vanilla JS, **no build step**) for **Trendli9 Prints**,
 - **Ordering happens only on WhatsApp.** There are no payments and no accounts. Every ordering section opens WhatsApp **directly on the business number** with the order text filled in **plus a link whose preview image shows the design**. The customer only taps Send.
   - No share sheet, no downloads, no copy/paste, no picking a contact. The client explicitly rejected each of these.
 - Use `https://api.whatsapp.com/send?phone=…&text=…`, **never `wa.me`**. wa.me's redirect corrupts emoji and ⚠ into "�".
-- **Bump the cache version after any CSS/JS edit:** replace `?v=20261016q` in **all** HTML files with a new value. Assets are served immutable.
+- **Bump the cache version after any CSS/JS edit:** replace `?v=20261016r` in **all** HTML files with a new value. Assets are served immutable.
 - Keep the Trendli9 identity: Bricolage Grotesque + Inter, CMYK logo dots, white paper background. The client likes demaprints.com, but never copy its headings or copy.
 - Prefer free / open-source assets. Photo credits go in `THIRD_PARTY_NOTICES.txt`.
 - The apron is an **enquiry-only** printing service (`enquiry: true`, `price: null` in the catalog), not a product for sale.
-- Only ₹250 per metre / per 22×39 in sheet is a confirmed price. The other prices are indicative.
+- **No prices anywhere on the site** (client request, 2026-10-16). Every product, service and tool says "Get a quote" / "Quote on WhatsApp"; the team quotes in the chat. Don't add prices, totals, discounts or ₹ figures back.
+- Design Studio print sizes are fixed at **2×2, 3×3 and 4×4 in** (the design's longer side). Each mockup print area has `inW` (real width in inches) in `assets/js/mockups.js`, which sets the scale.
 
 ## Key files
 
 | File | Role |
 |---|---|
-| `assets/js/config.js` | Business details: `whatsapp`, `phoneDisplay`, `instagram`, `address`, `orderApi` (Worker URL), `dtfPricePerMeter` |
-| `assets/js/catalog.js` | Products, prices, AUDIENCES/SERVICES, gallery captions |
+| `assets/js/config.js` | Business details: `whatsapp`, `phoneDisplay`, `instagram`, `address`, `orderApi` (Worker URL) |
+| `assets/js/catalog.js` | Products (no prices), AUDIENCES/SERVICES, gallery captions |
 | `assets/js/app.js` | Shared core: header/footer, cart (IndexedDB `t9_files` stores item files), checkout, `orderCard()`, `previewJPEG()`, `uploadOrder()`, `sendViaLink()`, `orderWithFiles()`, `waLink()`. Exposes `window.T9` |
-| `assets/js/gangsheet.js` + `gang-sheet.html` | Gang sheet builder: fixed 22×39 in portrait sheets, overflow onto more sheets, price = sheets × ₹250, repeat mode, 300 DPI PNG export (streamed PNG encoder, pHYs chunk, 6600×11700 px) |
+| `assets/js/gangsheet.js` + `gang-sheet.html` | Gang sheet builder: fixed 22×39 in portrait sheets, overflow onto more sheets, sheet count (no price), repeat mode, 300 DPI PNG export (streamed PNG encoder, pHYs chunk, 6600×11700 px) |
 | `assets/js/nest-worker.js` | True-shape nesting (bitset masks) in a Web Worker |
 | `assets/js/halftone.js` + `halftone.html` | Halftone / background remover. Has "Send to Gang Sheet" and "Order prints on WhatsApp" buttons |
-| `assets/js/studio.js` + `studio.html` | Design Studio (mockups on garments, front/back) |
+| `assets/js/studio.js` + `studio.html` | Design Studio (mockups on garments, front/back, 2×2 / 3×3 / 4×4 in print sizes) |
 | `assets/js/shop.js` + `shop.html` | Shop, quick view (`?p=<id>`), apron enquiry |
 | `contact.html`, `services.html` | Text-only enquiry / quote forms (WhatsApp text, no picture) |
 | `tools/build-services.js` | Regenerates the static blocks in `services.html` from the catalog: `node tools/build-services.js` |
@@ -86,7 +87,7 @@ Static website (HTML/CSS/vanilla JS, **no build step**) for **Trendli9 Prints**,
    - `404.html` uses absolute `/trendli9-prints/` paths. Change them to `/` when moving to the root domain. Also update `sitemap.xml` / `robots.txt`, which use a placeholder domain.
    - **Do not add `CNAME` before DNS resolves.** It would redirect the live site to a dead domain.
    - Then re-test every ordering flow on https://trendli9.com.
-2. **Client confirmations still pending:** indicative prices (other than ₹250 per metre), turnaround wording, and real job photos for the gallery (the current ones are placeholders).
+2. **Client confirmations still pending:** turnaround wording, and real job photos for the gallery (the current ones are placeholders).
 3. After any test sends: the owner should delete the TEST messages and remove the test browser under WhatsApp → Linked devices.
 
 ## Local development

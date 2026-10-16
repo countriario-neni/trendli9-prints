@@ -556,6 +556,9 @@ a.info-item:hover { transform: translateY(-3px); box-shadow: var(--sh-2); }
 .layer-item .t { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ctrl-row { display: grid; grid-template-columns: 70px 1fr 48px; align-items: center; gap: 10px; font-size: .86rem; font-weight: 700; margin-bottom: 6px; }
 .ctrl-row output { text-align: right; color: var(--muted); }
+.ctrl-row--size { grid-template-columns: 70px 1fr; margin-bottom: 12px; }
+.ctrl-row--size .seg-ctrl { justify-self: start; }
+.ctrl-row--size .seg-ctrl button { padding: 6px 12px; min-height: 36px; white-space: nowrap; }
 .tool-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .tool-row .btn { flex: 1; }
 .size-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }

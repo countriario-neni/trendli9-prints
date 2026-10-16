@@ -10,7 +10,7 @@
   <link rel="icon" href="favicon.ico" sizes="32x32"><link rel="apple-touch-icon" href="assets/img/icon-180.png"><link rel="manifest" href="site.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261016q">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261016r">
 </head>
 <body>
   <div id="site-header"></div>
@@ -19,7 +19,7 @@
       <div class="container">
         <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span aria-hidden="true">/</span><span aria-current="page">My Orders</span></nav>
         <h1>My <span class="grad-text">orders</span></h1>
-        <p>Orders placed from this device. Live updates on price, artwork approval, printing and dispatch come from our team in your WhatsApp chat.</p>
+        <p>Orders placed from this device. Updates on your quote, artwork approval, printing and dispatch come from our team in your WhatsApp chat.</p>
       </div>
     </section>
     <section class="section section--tint" style="padding-top:40px">
@@ -34,14 +34,14 @@
     </section>
   </main>
   <div id="site-footer"></div>
-  <script src="assets/js/config.js?v=20261016q"></script>
-  <script src="assets/js/catalog.js?v=20261016q"></script>
-  <script src="assets/js/icons.js?v=20261016q"></script>
-  <script src="assets/js/mockups.js?v=20261016q"></script>
-  <script src="assets/js/app.js?v=20261016q"></script>
+  <script src="assets/js/config.js?v=20261016r"></script>
+  <script src="assets/js/catalog.js?v=20261016r"></script>
+  <script src="assets/js/icons.js?v=20261016r"></script>
+  <script src="assets/js/mockups.js?v=20261016r"></script>
+  <script src="assets/js/app.js?v=20261016r"></script>
   <script>
   (function () {
-    const { $, esc, money, orders, openWA, cart, toast } = window.T9, I = window.T9_ICON, MK = window.T9_MOCKUPS;
+    const { $, esc, orders, openWA, cart, toast } = window.T9, I = window.T9_ICON, MK = window.T9_MOCKUPS;
     const newId = new URLSearchParams(location.search).get("new");
     function render() {
       const all = orders.all();
@@ -59,9 +59,8 @@
             <div class="cart-line" style="grid-template-columns:56px 1fr auto">
               <div class="cart-line__img" style="width:56px;height:56px">${window.T9.safeThumb(o.thumbs?.[n]) ? `<img src="${o.thumbs[n]}" alt="">` : i.mockup ? MK.svg(i.mockup, { color: i.colorHex }) : i.img ? `<img src="assets/img/${i.img}.webp" alt="">` : I("package")}</div>
               <div><h4>${esc(i.name)}</h4><div class="meta">${[i.color, i.variant, i.sizes && Object.keys(i.sizes).length ? Object.entries(i.sizes).map(([s, q]) => `${s}×${q}`).join(", ") : null, `${i.qty} ${i.unit || "pcs"}`].filter(Boolean).map(esc).join(" · ")}</div></div>
-              <b>${i.total != null ? money(i.total) : "Quote"}</b>
+              <span class="badge">Quote</span>
             </div>`).join("")}</div>
-          <div class="total-row"><span>Estimated total</span><span>${money(o.total)}${o.hasQuote ? " +" : ""}</span></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn btn--wa btn--sm" type="button" data-status="${esc(o.id)}">${I("whatsapp")} Ask for status</button>
             <button class="btn btn--ghost btn--sm" type="button" data-resend="${esc(o.id)}">${I("send")} Resend order</button>

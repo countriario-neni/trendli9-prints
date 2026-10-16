@@ -47,18 +47,6 @@
   const waLink = text => `https://api.whatsapp.com/send?phone=${C.whatsapp}&text=${encodeURIComponent(text)}`;
   const openWA = text => { const url = waLink(text), w = window.open(url, "_blank"); if (w) w.opener = null; else location.href = url; };
 
-  /* ---------- pricing ---------- */
-  function tierFor(qty) { let t = CAT.TIERS[0]; CAT.TIERS.forEach(x => { if (qty >= x.min) t = x; }); return t; }
-  function priceLine({ product, qty, areas = ["front"], sizeLabel }) {
-    if (product.price == null) return { unit: null, total: null, off: 0 };
-    let unit = product.price;
-    if (product.sizePrice && sizeLabel && product.sizePrice[sizeLabel] != null) unit = product.sizePrice[sizeLabel];
-    if (product.areas) unit += areas.reduce((s, id) => s + ((product.areas.find(a => a.id === id) || {}).add || 0), 0);
-    const tier = product.meter ? { off: 0 } : tierFor(qty);
-    const total = unit * qty * (1 - tier.off);
-    return { unit, total, off: tier.off };
-  }
-
   /* ---------- cart ---------- */
   const cart = {
     items() { return store.get("t9_cart", []); },
@@ -106,7 +94,6 @@
     if (i.design) lines.push(`   Design: ${i.design}`);
     if (i.notes) lines.push(`   Notes: ${i.notes}`);
     if (i.files) lines.push(`   Files: ${i.files} attached`);
-    lines.push(`   Est.: ${i.total != null ? money(i.total) : "Quote required"}`);
     return lines.join("\n");
   }
   function orderMessage(o) {
@@ -118,10 +105,9 @@
       o.customer.address ? `*Address:* ${o.customer.address}` : null,
       o.customer.needBy ? `*Needed by:* ${o.customer.needBy}` : null, ``,
       `*Items*`, ...o.items.map((i, n) => itemText(i, n + 1)), ``,
-      `*Estimated total:* ${o.total ? money(o.total) : "—"}${o.hasQuote ? " + quote items" : ""}`,
       o.customer.notes ? `*Notes:* ${o.customer.notes}` : null, ``,
       o.items.some(i => i.files) ? `My artwork / print files are attached.` : o.items.some(i => i.hasArtwork) ? `I will attach my artwork / mockup files in this chat.` : `Please share artwork guidance.`,
-      `Please confirm the final price & timeline.`
+      `Please share your quote & timeline.`
     ];
     return L.filter(l => l !== null).join("\n");
   }
@@ -147,13 +133,13 @@
     host.outerHTML = `
     <a class="skip-link" href="#main">Skip to content</a>
     <div class="announce" aria-label="Announcements"><div class="announce__track">
-      ${[0, 1].map(() => `<span><i></i>DTF transfers from ${money(C.dtfPricePerMeter)} / metre</span><span><i></i>No minimum order on custom apparel</span><span><i></i>Bulk & corporate pricing up to 20% off</span><span><i></i>Order on WhatsApp: ${C.phoneDisplay}</span><span><i></i>${esc(C.address.city)} · Shipping across India</span>`).join("")}
+      ${[0, 1].map(() => `<span><i></i>DTF gang sheets · 22 × 39 in</span><span><i></i>No minimum order on custom apparel</span><span><i></i>Free quote on WhatsApp</span><span><i></i>Order on WhatsApp: ${C.phoneDisplay}</span><span><i></i>${esc(C.address.city)} · Shipping across India</span>`).join("")}
     </div></div>
     <header class="site-header" id="top">
       <div class="container site-header__inner">
         <a class="brand" href="index.html" aria-label="${esc(C.brand)} home">
           <img class="brand__mark" src="assets/img/logo-mark-sm.webp" alt="" width="66" height="46">
-          <img class="brand__word" src="assets/img/logo-word.webp" alt="${esc(C.brand)}" width="168" height="40">
+          <img class="brand__word" src="assets/img/logo-word.webp?v=20261016r" alt="${esc(C.brand)}" width="150" height="40">
         </a>
         <nav class="nav" id="nav" aria-label="Main">
           <button class="icon-btn nav__close" type="button" aria-label="Close menu" data-close-nav>${I("close")}</button>
@@ -183,7 +169,7 @@
       <div class="container">
         <div class="footer-grid">
           <div class="footer-brand">
-            <img src="assets/img/logo-word.webp" alt="${esc(C.brand)}" width="252" height="60" loading="lazy">
+            <img src="assets/img/logo-word.webp?v=20261016r" alt="${esc(C.brand)}" width="225" height="60" loading="lazy">
             <p>${esc(C.tagline)} Premium DTF transfers, custom apparel, saree & blouse prints, hotel branding and DTF consumables — from ${esc(a.city)} to all of India.</p>
             <span class="unit-pill">${I("sparkle")} ${esc(C.parent)}</span>
             <div class="socials">
@@ -228,7 +214,7 @@
         <form class="modal__body" id="checkoutForm" novalidate>
           <p class="eyebrow">Checkout via WhatsApp</p>
           <h2 id="coTitle" style="font-size:1.5rem">Confirm your details</h2>
-          <p class="muted" style="font-size:.95rem">We'll open WhatsApp with your full order pre-filled. Tap <b>Send</b> and our team confirms price, artwork & timeline in the same chat.</p>
+          <p class="muted" style="font-size:.95rem">We'll open WhatsApp with your full order pre-filled. Tap <b>Send</b> and our team sends your quote and confirms artwork & timeline in the same chat.</p>
           <div class="form-grid">
             <div class="field full" id="coTypeField"><span class="label">Ordering as <span class="req">*</span></span><div class="opt-group" role="radiogroup" aria-label="Customer type">
               <label class="opt"><input type="radio" name="ctype" value="Business"><span>${I("building")} Business</span></label>
@@ -245,9 +231,8 @@
           </div>
           <div class="card" style="padding:16px;background:var(--bg);box-shadow:none;margin-bottom:16px">
             <div class="total-row"><span>Items</span><span id="coCount"></span></div>
-            <div class="total-row big" style="margin-top:6px"><span>Est. total</span><span id="coTotal"></span></div>
             <p class="note" id="coFiles" style="margin:6px 0 0" hidden></p>
-            <p class="note" style="margin:6px 0 0">Indicative price. Final quote confirmed on WhatsApp. No payment is taken on this website.</p>
+            <p class="note" style="margin:6px 0 0">Prices are quoted on WhatsApp. No payment is taken on this website.</p>
           </div>
           <button class="btn btn--wa btn--block" type="submit">${I("whatsapp")} Send order on WhatsApp</button>
         </form>
@@ -335,12 +320,11 @@
       <div class="cart-line">
         <div class="cart-line__img">${thumbHTML(i)}</div>
         <div><h4>${esc(i.name)}</h4><div class="meta">${[i.color, i.variant, i.sizes ? Object.entries(i.sizes).map(([s, q]) => `${s}×${q}`).join(", ") : null, `${i.qty} ${i.unit || "pcs"}`, i.areas?.length ? "Print: " + i.areas.join(", ") : null, i.files ? `${i.files} file${i.files > 1 ? "s" : ""} attached` : null].filter(Boolean).map(esc).join(" · ")}</div>
-          <div style="font-weight:900;margin-top:4px">${i.total != null ? money(i.total) : '<span class="badge">Quote</span>'}</div></div>
+          <div style="margin-top:4px"><span class="badge">Quote on WhatsApp</span></div></div>
         <button class="rm" type="button" data-remove="${esc(i.key)}" aria-label="Remove ${esc(i.name)}">${I("trash")}</button>
       </div>`).join("");
     foot.innerHTML = `
-      <div class="total-row big"><span>Est. total</span><span>${money(cart.total())}${cart.hasQuote() ? " +" : ""}</span></div>
-      ${cart.hasQuote() ? '<p class="note" style="margin:0">"+" Quote items are priced by our team on WhatsApp.</p>' : ""}
+      <p class="note" style="margin:0">Our team sends your quote on WhatsApp.</p>
       <button class="btn btn--wa btn--block" type="button" data-checkout>${I("whatsapp")} Checkout on WhatsApp</button>
       <button class="btn btn--ghost btn--sm" type="button" data-clear-cart>Clear order</button>`;
   }
@@ -348,7 +332,6 @@
   function openCheckout() {
     const items = cart.items(); if (!items.length) return;
     $("#coCount").textContent = items.length + (items.length > 1 ? " products" : " product");
-    $("#coTotal").textContent = money(cart.total()) + (cart.hasQuote() ? " +" : "");
     const saved = store.get("t9_customer", {});
     ["name", "phone", "city"].forEach(k => { const el = $(`#checkoutForm [name=${k}]`); if (el && saved[k] && !el.value) el.value = saved[k]; });
     $$(".drawer.is-open").forEach(d => { d.classList.remove("is-open"); d.setAttribute("aria-hidden", "true"); });
@@ -725,7 +708,7 @@
           <button class="icon-btn" type="button" id="chatClose" aria-label="Close assistant">${I("close")}</button></div>
         <div class="chat__body" id="chatBody" aria-live="polite"></div>
         <form class="chat__form" id="chatForm"><label class="sr-only" for="chatInput">Type your question</label>
-          <input id="chatInput" autocomplete="off" placeholder="Ask about prices, DTF, orders…">
+          <input id="chatInput" autocomplete="off" placeholder="Ask about DTF, quotes, orders…">
           <button type="submit" aria-label="Send">${I("send")}</button></form>
       </section>`);
     const bubble = $("#waBubble");
@@ -777,7 +760,7 @@
     form.addEventListener("submit", e => { e.preventDefault(); const t = input.value.trim(); if (!t) return; input.value = ""; handle(t); });
 
     const wa = (t, label = "Continue on WhatsApp") => `<a href="${waLink(t)}" target="_blank" rel="noopener">${label}</a>`;
-    const MAIN = ["Services", "Prices", "Design my own", "Track my order", "Talk to a human"];
+    const MAIN = ["Services", "Get a quote", "Design my own", "Track my order", "Talk to a human"];
     const R = {
       greet: () => ({ html: `Hi! I'm the Trendli9 assistant. I can help with <b>DTF prints, custom apparel, saree & blouse prints, hotel branding, bulk orders</b> and <b>DTF consumables</b>. What do you need today?`, quick: MAIN })
     };
@@ -789,25 +772,25 @@
           const top = o.slice(0, 3).map(x => `• <b>${esc(x.id)}</b> — ${new Date(x.date).toLocaleDateString("en-IN")} · ${x.items.length} item(s)`).join("<br>");
           return { html: `Your recent orders on this device:<br>${top}<br><br>See details on <a href="orders.html">My Orders</a>, or ${wa(`Hi Trendli9, please share the status of my order ${o[0].id}.`, "ask for a status update on WhatsApp")}.`, quick: ["Talk to a human"] };
         } },
-      { k: /price|cost|rate|charge|how much|quote|₹|rs\b|rupee|per met|pricing/, r: () => ({ html: `Popular starting prices:<br>• <b>DTF gang sheet:</b> ${money(C.dtfPricePerMeter)} / metre (22 × 39 in sheets)<br>• <b>Custom T-shirt:</b> from ${money(349)} incl. front print<br>• <b>Hoodie:</b> from ${money(899)}<br>• <b>Bulk:</b> 5–20% off from 10 pcs<br><br>Try the <a href="gang-sheet.html">Gang Sheet Builder</a> for an instant estimate, or browse the <a href="shop.html">shop</a>. Final quotes are confirmed on WhatsApp.`, quick: ["Bulk order", "Design my own", "Talk to a human"] }) },
+      { k: /price|cost|rate|charge|how much|quote|₹|rs\b|rupee|per met|pricing/, r: () => ({ html: `Prices depend on your design, size, fabric and quantity, so our team quotes every order on WhatsApp.<br><br>Build your layout in the <a href="gang-sheet.html">Gang Sheet Builder</a> or <a href="studio.html">Design Studio</a> and send it, or ${wa("Hi Trendli9, I'd like a quote.", "ask for a quote on WhatsApp")}.`, quick: ["Bulk order", "Design my own", "Talk to a human"] }) },
       { k: /service|what do you (do|offer)|offer/, r: () => ({ html: `We offer:<br>${CAT.SERVICES.map(s => `• <a href="services.html#${s.id}">${esc(s.name)}</a>`).join("<br>")}`, quick: ["DTF printing", "Saree & blouse", "Hotel branding", "Spare parts"] }) },
-      { k: /dtf|transfer|gang ?sheet|film print/, r: () => ({ html: `<b>DTF (Direct-to-Film)</b> prints your design on film with white ink + adhesive powder. You press it on any fabric — cotton, polyester, blends, denim, nylon. Results are vibrant, stretchable and wash-durable.<br><br>Gang sheets start at <b>${money(C.dtfPricePerMeter)}/metre</b>. Ready-to-press single transfers are also available.`, quick: ["Prices", "Press instructions", "Order DTF"] }) },
+      { k: /dtf|transfer|gang ?sheet|film print/, r: () => ({ html: `<b>DTF (Direct-to-Film)</b> prints your design on film with white ink + adhesive powder. You press it on any fabric — cotton, polyester, blends, denim, nylon. Results are vibrant, stretchable and wash-durable.<br><br>We print 22 × 39 in gang sheets and ready-to-press single transfers — quoted on WhatsApp.`, quick: ["Get a quote", "Press instructions", "Order DTF"] }) },
       { k: /press|temperature|how to apply|heat|peel/, r: () => ({ html: `Heat-press guide:<br>• <b>Temp:</b> 150–160 °C<br>• <b>Time:</b> 12–15 seconds, medium-firm pressure<br>• <b>Peel:</b> hot or cold, as marked on the film<br>• Re-press 5 s with parchment for extra durability<br><br>Wash inside-out in cold water and avoid ironing directly on the print.` , quick: ["Order DTF", "Talk to a human"] }) },
       { k: /saree|sari|blouse|ethnic|kurti|lehenga|dupatta|boutique/, r: () => ({ html: `We print motifs, borders and pallu art on <b>sarees</b>, plus neckline & back designs on <b>blouses</b> — silk, georgette, chiffon and cotton. Boutiques get exclusive, repeatable designs without embroidery lead-times.<br><br>Share your fabric & design on WhatsApp for a quote: ${wa("Hi Trendli9, I'd like a quote for saree / blouse printing.")}`, quick: ["See gallery", "Talk to a human"] }) },
       { k: /hotel|uniform|chef|apron|staff|school|hospital|linen/, r: () => ({ html: `For <b>hotels, restaurants, schools and offices</b> we print crests and logos on chef coats, aprons, staff uniforms, linens and pillow covers — built for commercial laundering. Your logo stays on file for repeat orders.`, quick: ["Bulk order", "Talk to a human"] }) },
-      { k: /bulk|corporate|wholesale|event|company|team|reseller|brand|job work|large/, r: () => ({ html: `Bulk & corporate pricing (on garments):<br>• 10+ pcs — <b>5% off</b><br>• 25+ pcs — <b>10% off</b><br>• 50+ pcs — <b>15% off</b><br>• 100+ pcs — <b>20% off</b><br><br>We handle size sheets, names & numbers and size-wise packing. Clothing brands & resellers get dedicated job-work rates.`, quick: ["Design my own", "Talk to a human"] }) },
+      { k: /bulk|corporate|wholesale|event|company|team|reseller|brand|job work|large/, r: () => ({ html: `Bulk & corporate orders are welcome — send your quantities and our team quotes on WhatsApp.<br><br>We handle size sheets, names & numbers and size-wise packing. Clothing brands & resellers get dedicated job-work rates.`, quick: ["Design my own", "Talk to a human"] }) },
       { k: /spare|consumable|ink|powder|printhead|head|damper|capping|wiper|pet film|film roll|cleaning/, r: () => ({ html: `We supply tested <b>DTF consumables & spares</b>: C/M/Y/K/W inks, PET film (sheets & rolls), hot-melt powder, printheads (XP600, i3200, L1800), dampers, capping & wiper kits and cleaning solution.<br><br>See the <a href="shop.html?cat=consumables">spares catalogue</a> or ${wa("Hi Trendli9, I need DTF spare parts / consumables. Please share prices.", "get prices on WhatsApp")}.`, quick: ["Talk to a human"] }) },
-      { k: /design|customi[sz]e|upload|artwork|logo|my own|mockup|studio/, r: () => ({ html: `Open the <a href="studio.html">Design Studio</a> — pick a product & colour, upload your artwork or add text, drag to position, and see the live price. Then add it to your order and check out on WhatsApp. 🎨`, quick: ["Prices", "Track my order"] }) },
-      { k: /time|turnaround|how long|fast|urgent|deliver|days|when/, r: () => ({ html: `${esc(C.turnaround)}<br><br>Need it urgently? ${wa("Hi Trendli9, I have an urgent order. Can you help?", "Message us on WhatsApp")} with your deadline.`, quick: ["Prices", "Talk to a human"] }) },
-      { k: /minimum|moq|single|one piece|1 piece|min order/, r: () => ({ html: `No minimum for custom apparel — you can order a <b>single piece</b>. DTF gang sheets start from 1 sheet (22 × 39 in). Bulk discounts begin at 10 pieces.`, quick: ["Design my own", "Prices"] }) },
-      { k: /fabric|material|polyester|cotton|nylon|denim|leather|work on/, r: () => ({ html: `DTF works on almost any fabric: <b>cotton, polyester, poly-cotton blends, rayon, silk, denim, nylon, fleece and even leather</b> — light or dark colours.` , quick: ["DTF printing", "Prices"] }) },
-      { k: /wash|durab|last|fade|crack/, r: () => ({ html: `Our DTF prints are stretchable and wash-durable. For best life: wash inside-out in cold water, mild detergent, no bleach, and don't iron directly on the print.` , quick: ["Prices"] }) },
+      { k: /design|customi[sz]e|upload|artwork|logo|my own|mockup|studio/, r: () => ({ html: `Open the <a href="studio.html">Design Studio</a> — pick a product & colour, upload your artwork or add text, drag to position and preview it. Then add it to your order and check out on WhatsApp. 🎨`, quick: ["Get a quote", "Track my order"] }) },
+      { k: /time|turnaround|how long|fast|urgent|deliver|days|when/, r: () => ({ html: `${esc(C.turnaround)}<br><br>Need it urgently? ${wa("Hi Trendli9, I have an urgent order. Can you help?", "Message us on WhatsApp")} with your deadline.`, quick: ["Get a quote", "Talk to a human"] }) },
+      { k: /minimum|moq|single|one piece|1 piece|min order/, r: () => ({ html: `No minimum for custom apparel — you can order a <b>single piece</b>. DTF gang sheets start from 1 sheet (22 × 39 in).`, quick: ["Design my own", "Get a quote"] }) },
+      { k: /fabric|material|polyester|cotton|nylon|denim|leather|work on/, r: () => ({ html: `DTF works on almost any fabric: <b>cotton, polyester, poly-cotton blends, rayon, silk, denim, nylon, fleece and even leather</b> — light or dark colours.` , quick: ["DTF printing", "Get a quote"] }) },
+      { k: /wash|durab|last|fade|crack/, r: () => ({ html: `Our DTF prints are stretchable and wash-durable. For best life: wash inside-out in cold water, mild detergent, no bleach, and don't iron directly on the print.` , quick: ["Get a quote"] }) },
       { k: /where|address|location|visit|shop|studio location|map|vizag|visakhapatnam/, r: () => ({ html: `📍 <b>${esc(C.address.line1)}</b>, ${esc(C.address.line2)}, ${esc(C.address.city)}<br>🕒 ${esc(C.hours)}<br><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(C.address.mapsQuery)}" target="_blank" rel="noopener">Open in Google Maps</a>`, quick: ["Talk to a human"] }) },
-      { k: /pay|payment|upi|gpay|cash|advance/, r: () => ({ html: `No payment is taken on the website. After you send your order on WhatsApp, our team confirms the final quote and shares payment details there.`, quick: ["Talk to a human"] }) },
+      { k: /pay|payment|upi|gpay|cash|advance/, r: () => ({ html: `No payment is taken on the website. After you send your order on WhatsApp, our team sends your quote and shares payment details there.`, quick: ["Talk to a human"] }) },
       { k: /contact|call|phone|number|email|mail|whatsapp|human|agent|person|talk/, r: () => ({ html: `You can reach the team directly:<br>📱 <a href="tel:${C.phoneTel}">${C.phoneDisplay}</a><br>✉️ <a href="mailto:${C.email}">${esc(C.email)}</a><br><br>${wa("Hi Trendli9! I have a question.", "💬 Open WhatsApp chat")}` }) },
       { k: /instagram|insta|social/, r: () => ({ html: `Follow our latest prints on Instagram: <a href="https://instagram.com/${C.instagram}" target="_blank" rel="noopener">@${esc(C.instagram)}</a>` }) },
       { k: /gallery|sample|work|portfolio|see/, r: () => ({ html: `Browse recent prints in our <a href="gallery.html">gallery</a> and on <a href="https://instagram.com/${C.instagram}" target="_blank" rel="noopener">Instagram</a>.` }) },
-      { k: /order|buy|place/, r: () => ({ html: `Three easy ways to order:<br>1. <a href="shop.html">Shop</a> a product & add to cart<br>2. <a href="studio.html">Design your own</a> in the studio<br>3. Send your requirement straight to ${wa("Hi Trendli9, I'd like to place an order.", "WhatsApp")}<br><br>Checkout opens WhatsApp with your complete order and an order ID.`, quick: ["Prices", "Design my own"] }) },
+      { k: /order|buy|place/, r: () => ({ html: `Three easy ways to order:<br>1. <a href="shop.html">Shop</a> a product & add to cart<br>2. <a href="studio.html">Design your own</a> in the studio<br>3. Send your requirement straight to ${wa("Hi Trendli9, I'd like to place an order.", "WhatsApp")}<br><br>Checkout opens WhatsApp with your complete order and an order ID.`, quick: ["Get a quote", "Design my own"] }) },
       { k: /thank|thanks|ok|great|cool|super/, r: () => ({ html: `Happy to help! Anything else?`, quick: MAIN }) }
     ];
     const alias = { "Talk to a human": "talk to human", "Place an order": "order", "Order DTF": "dtf order buy", "See gallery": "gallery", "Spare parts": "spare" };
@@ -922,5 +905,5 @@
   bindGlobal(); bindCheckout(); initLightbox(); updateCartCount(); renderCart();
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initMotion); else initMotion();
 
-  window.T9 = { safeThumb, safeHex, hydrate, $, $$, esc, money, waLink, openWA, orderWithFiles, orderCard, cart, orders, priceLine, tierFor, toast, store, orderMessage, openLayer, closeLayers, validate, reduceMotion };
+  window.T9 = { safeThumb, safeHex, hydrate, $, $$, esc, money, waLink, openWA, orderWithFiles, orderCard, cart, orders, toast, store, orderMessage, openLayer, closeLayers, validate, reduceMotion };
 })();

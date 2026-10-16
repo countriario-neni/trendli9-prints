@@ -27,7 +27,6 @@ window.T9_CONFIG = {
 
   hours: "Mon – Sat · 10:00 AM – 8:00 PM",
   currency: "₹",
-  dtfPricePerMeter: 250,
   // Order upload service (site/worker: Cloudflare Worker + Workers KV). When set, browsers that can't
   // share files send the order text with a link whose preview shows the order image.
   orderApi: "https://trendli9-orders.trendli9-orders.workers.dev",

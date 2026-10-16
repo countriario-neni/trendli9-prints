@@ -1,6 +1,6 @@
 /* TRENDLI9 — Shop: filter, search, quick view, add to order */
 (function () {
-  const { $, $$, esc, money, cart, priceLine, tierFor, openLayer, openWA } = window.T9;
+  const { $, $$, esc, cart, openLayer, openWA } = window.T9;
   const CAT = window.T9_CATALOG, MK = window.T9_MOCKUPS, I = window.T9_ICON;
   const params = new URLSearchParams(location.search);
   let cat = params.get("cat") || "all", q = "", sort = "featured";
@@ -16,15 +16,12 @@
   const media = (p, color) => (p.photo && !color) ? photo(p) : p.mockup ? MK.svg(p.mockup, { color: color || p.colors[showIdx(p)].hex, label: p.name, inner: MK.sampleArt(p.mockup) })
     : p.icon ? `<div class="icon-tile" style="--tile:${p.tile}" role="img" aria-label="${esc(p.name)}">${I(p.icon)}</div>`
     : `<img src="assets/img/${p.img}.webp" alt="${esc(p.name)}" loading="lazy" width="800" height="600">`;
-  const priceTxt = p => p.enquiry ? `<span class="price">On enquiry</span>` : p.price == null ? `<span class="price">Get price</span>` :
-    `<span class="price"><small>from</small> ${money(p.sizePrice ? Math.min(...Object.values(p.sizePrice)) : p.price)}<small> / ${p.unit}</small></span>`;
+  // no prices on the site: every product is quoted on WhatsApp
+  const priceTxt = p => `<span class="price">${p.enquiry ? "On enquiry" : "Get a quote"}</span>`;
 
   function render() {
     let list = CAT.PRODUCTS.filter(p => (cat === "all" || p.cat === cat) &&
       (!q || (p.name + " " + p.desc + " " + p.cat).toLowerCase().includes(q)));
-    const pv = p => p.price ?? 1e9;
-    if (sort === "low") list.sort((a, b) => pv(a) - pv(b));
-    if (sort === "high") list.sort((a, b) => (b.price ?? -1) - (a.price ?? -1));
     if (sort === "az") list.sort((a, b) => a.name.localeCompare(b.name));
     $("#resultCount").textContent = `${list.length} product${list.length !== 1 ? "s" : ""}`;
     $("#grid").innerHTML = list.length ? list.map(p => `
@@ -65,14 +62,13 @@
         <h2 id="qvTitle" style="font-size:1.5rem">${esc(p.name)}</h2>
         <p class="muted">${esc(p.desc)}</p>
         ${p.colors ? `<div class="field"><span class="label">Colour: <span id="qvColorName">${p.colors[showIdx(p)].name}</span></span><div class="color-opts">${p.colors.map((c, i) => `<label class="color-opt" title="${c.name}"><input type="radio" name="color" value="${i}" ${i === showIdx(p) ? "checked" : ""} aria-label="${c.name}"><span style="background:${c.hex}"></span></label>`).join("")}</div></div>` : ""}
-        ${p.areas && p.areas.length > 1 ? `<div class="field"><span class="label">Print locations</span><div class="opt-group">${p.areas.map(a => `<label class="opt"><input type="checkbox" name="area" value="${a.id}" ${a.id === "front" ? "checked" : ""}><span>${a.name}${a.add ? ` +${money(a.add)}` : ""}</span></label>`).join("")}</div></div>` : ""}
+        ${p.areas && p.areas.length > 1 ? `<div class="field"><span class="label">Print locations</span><div class="opt-group">${p.areas.map(a => `<label class="opt"><input type="checkbox" name="area" value="${a.id}" ${a.id === "front" ? "checked" : ""}><span>${a.name}</span></label>`).join("")}</div></div>` : ""}
         ${hasSizes ? `<div class="field"><span class="label">Sizes & quantity</span><div class="size-grid">${p.sizes.map(s => `<label class="size-cell">${s}<input type="number" min="0" inputmode="numeric" name="size_${s}" value="0" aria-label="Quantity size ${s}"></label>`).join("")}</div></div>`
-          : `${p.sizes ? `<div class="field"><span class="label">Option</span><div class="opt-group">${p.sizes.map((s, i) => `<label class="opt"><input type="radio" name="variant" value="${s}" ${i ? "" : "checked"}><span>${s}${p.sizePrice ? " · " + money(p.sizePrice[s]) : ""}</span></label>`).join("")}</div></div>` : ""}
+          : `${p.sizes ? `<div class="field"><span class="label">Option</span><div class="opt-group">${p.sizes.map((s, i) => `<label class="opt"><input type="radio" name="variant" value="${s}" ${i ? "" : "checked"}><span>${s}</span></label>`).join("")}</div></div>` : ""}
              <div class="field"><label for="qvQty">Quantity (${p.unit}${p.minQty > 1 ? `, min ${p.minQty}` : ""})</label><div class="qty"><button type="button" data-q="-1" aria-label="Decrease">−</button><input type="number" id="qvQty" name="qty" min="${p.minQty || 1}" value="${p.minQty || 1}"><button type="button" data-q="1" aria-label="Increase">+</button></div></div>`}
         <div class="field"><label for="qvNotes">Notes / design details</label><textarea class="textarea" id="qvNotes" name="notes" rows="2" placeholder="${p.quote ? "Fabric, quantity, design idea, deadline…" : "Artwork placement, names & numbers…"}"></textarea></div>
         <div class="card" style="padding:14px 16px;background:var(--bg);box-shadow:none;margin-bottom:14px">
-          <div class="total-row"><span>Estimated</span><span id="qvPrice" style="font-family:var(--font-display)"></span></div>
-          <div class="tier-bar" id="qvTier" ${hasSizes ? "" : "hidden"}>${CAT.TIERS.slice(1).map(() => "<span></span>").join("")}</div>
+          <div class="total-row"><span>Price</span><span style="font-family:var(--font-display)">Quote on WhatsApp</span></div>
           <p class="note" id="qvNote" style="margin:4px 0 0"></p>
         </div>
         <div style="display:grid;gap:8px">
@@ -90,18 +86,12 @@
       if (hasSizes) { sizes = {}; p.sizes.forEach(s => { const n = parseInt(fd.get("size_" + s)) || 0; if (n > 0) sizes[s] = n; }); qty = Object.values(sizes).reduce((a, b) => a + b, 0); }
       else qty = Math.max(p.minQty || 1, parseInt(fd.get("qty")) || 1);
       const variant = fd.get("variant") || null;
-      const pl = priceLine({ product: p, qty: Math.max(qty, 1), areas: areaIds, sizeLabel: variant });
-      return { color, areaIds, sizes, qty, variant, pl, notes: fd.get("notes").trim() };
+      return { color, areaIds, sizes, qty, variant, notes: fd.get("notes").trim() };
     };
     const update = () => {
       const r = read();
       if (r.color) { $("#qvColorName").textContent = r.color.name; if (colourTouched || !p.photo) $("#qvMedia").innerHTML = media(p, r.color.hex) + (p.photo ? `<span class="qv__tag">Colour preview</span>` : ""); }
-      $("#qvPrice").textContent = r.pl.total == null ? "Quote on WhatsApp" : (hasSizes && !r.qty ? `${money(r.pl.unit)} / pc` : money(r.pl.total));
-      const tierIdx = CAT.TIERS.indexOf(tierFor(r.qty));
-      $$("#qvTier span").forEach((s, i) => s.classList.toggle("on", i < tierIdx));
-      const next = CAT.TIERS.find(t => t.min > r.qty);
-      $("#qvNote").textContent = r.pl.total == null ? "Our team will price this based on your requirement." :
-        hasSizes ? (r.qty ? `${r.qty} pcs${r.pl.off ? ` · ${r.pl.off * 100}% bulk discount applied` : ""}${next ? ` · add ${next.min - r.qty} more for ${next.off * 100}% off` : ""}` : "Enter quantities per size") : `${r.qty} ${p.unit} × ${money(r.pl.unit)}`;
+      $("#qvNote").textContent = (hasSizes && !r.qty ? "Enter quantities per size. " : "") + "Our team sends your quote on WhatsApp.";
     };
     let colourTouched = false;
     form.addEventListener("change", e => { if (e.target.name === "color") colourTouched = true; });
@@ -111,12 +101,12 @@
       e.preventDefault(); const r = read();
       if (hasSizes && !r.qty) { window.T9.toast("Add a quantity for at least one size"); form.querySelector(".size-cell input").focus(); return; }
       cart.add({ productId: p.id, name: p.name, mockup: p.mockup, img: p.img, photo: !colourTouched ? p.photo : null, color: r.color?.name, colorHex: r.color?.hex, sizes: r.sizes, variant: r.variant, qty: r.qty, unit: hasSizes ? "pcs" : p.unit,
-        areas: r.areaIds.map(id => p.areas.find(a => a.id === id).name), total: r.pl.total, notes: r.notes, hasArtwork: p.cat !== "consumables" });
+        areas: r.areaIds.map(id => p.areas.find(a => a.id === id).name), total: null, notes: r.notes, hasArtwork: p.cat !== "consumables" });
       window.T9.closeLayers();
     });
     $("#qvWA").addEventListener("click", () => {
       const r = read();
-      sendWithPicture(p, `Hi Trendli9! I'm interested in *${p.name}*${r.color ? ` (${r.color.name})` : ""}${r.variant ? ` — ${r.variant}` : ""}${r.qty ? `, qty ${r.qty}` : ""}.${r.notes ? `\nNotes: ${r.notes}` : ""}\nPlease share price & details.`, colourTouched && r.color ? r.color.hex : null);
+      sendWithPicture(p, `Hi Trendli9! I'm interested in *${p.name}*${r.color ? ` (${r.color.name})` : ""}${r.variant ? ` — ${r.variant}` : ""}${r.qty ? `, qty ${r.qty}` : ""}.${r.notes ? `\nNotes: ${r.notes}` : ""}\nPlease share a quote & details.`, colourTouched && r.color ? r.color.hex : null);
     });
     update();
     openLayer($("#qvModal"));
@@ -140,7 +130,7 @@
     } }).catch(() => openWA(text));
   }
 
-  // services we do on the customer's own items: description + WhatsApp enquiry only, no price or cart
+  // services we do on the customer's own items: description + WhatsApp enquiry only, no cart
   function enquiryView(p) {
     $("#qvBody").innerHTML = `
       <div class="qv__media" id="qvMedia">${media(p)}</div>
