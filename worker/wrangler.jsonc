@@ -15,7 +15,7 @@
   ],
   "vars": {
     // only the website may upload; comma-separated origins
-    "ALLOWED_ORIGINS": "https://portfolio.hirerockysolutions.com,http://127.0.0.1:8765,http://localhost:8765",
+    "ALLOWED_ORIGINS": "https://trendli9.com,https://www.trendli9.com,https://portfolio.hirerockysolutions.com,http://127.0.0.1:8765,http://localhost:8765",
     "BRAND": "Trendli9 Prints",
     "WHATSAPP": "919932627413"
   },
