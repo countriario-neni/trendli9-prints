@@ -18,7 +18,7 @@ Static website (HTML/CSS/vanilla JS, **no build step**) for **Trendli9 Prints**,
 - **Ordering happens only on WhatsApp.** There are no payments and no accounts. Every ordering section opens WhatsApp **directly on the business number** with the order text filled in **plus a link whose preview image shows the design**. The customer only taps Send.
   - No share sheet, no downloads, no copy/paste, no picking a contact. The client explicitly rejected each of these.
 - Use `https://api.whatsapp.com/send?phone=…&text=…`, **never `wa.me`**. wa.me's redirect corrupts emoji and ⚠ into "�".
-- **Bump the cache version after any CSS/JS edit:** replace `?v=20261016r` in **all** HTML files with a new value. Assets are served immutable.
+- **Bump the cache version after any CSS/JS edit:** replace `?v=20261016s` in **all** HTML files with a new value. Assets are served immutable.
 - Keep the Trendli9 identity: Bricolage Grotesque + Inter, CMYK logo dots, white paper background. The client likes demaprints.com, but never copy its headings or copy.
 - Prefer free / open-source assets. Photo credits go in `THIRD_PARTY_NOTICES.txt`.
 - The apron is an **enquiry-only** printing service (`enquiry: true`, `price: null` in the catalog), not a product for sale.
@@ -39,6 +39,7 @@ Static website (HTML/CSS/vanilla JS, **no build step**) for **Trendli9 Prints**,
 | `assets/js/shop.js` + `shop.html` | Shop, quick view (`?p=<id>`), apron enquiry |
 | `contact.html`, `services.html` | Text-only enquiry / quote forms (WhatsApp text, no picture) |
 | `tools/build-services.js` | Regenerates the static blocks in `services.html` from the catalog: `node tools/build-services.js` |
+| `tools/seo.py` | Writes each page's SEO head (title, description, canonical, Open Graph, JSON-LD incl. LocalBusiness, FAQPage, Services, breadcrumbs) between `<!-- SEO -->` markers, plus `sitemap.xml` and `robots.txt`. Edit titles/descriptions there, not in the HTML: `python3 tools/seo.py` |
 | `tools/optimize_images.py` | Converts photos in `assets/img` to resized WebP |
 | `worker/` | Order service (see below) |
 
@@ -84,7 +85,7 @@ Static website (HTML/CSS/vanilla JS, **no build step**) for **Trendli9 Prints**,
 1. **Move to the custom domain trendli9.com.** As of 2026-10-16 the domain is **not registered** (registry RDAP returns 404). The owner must buy it first. Then:
    - DNS: four apex `A` records to 185.199.108.153, 185.199.109.153, 185.199.110.153 and 185.199.111.153, plus `CNAME www` → `countriario-neni.github.io`.
    - Add a file `CNAME` containing `trendli9.com` at the repo root, push, and turn on "Enforce HTTPS" in the repo's Pages settings.
-   - `404.html` uses absolute `/trendli9-prints/` paths. Change them to `/` when moving to the root domain. Also update `sitemap.xml` / `robots.txt`, which use a placeholder domain.
+   - `404.html` uses absolute `/trendli9-prints/` paths. Change them to `/` when moving to the root domain. Set `BASE` in `tools/seo.py` to `https://trendli9.com/` and run it (updates canonicals, Open Graph, JSON-LD, sitemap and robots).
    - **Do not add `CNAME` before DNS resolves.** It would redirect the live site to a dead domain.
    - Then re-test every ordering flow on https://trendli9.com.
 2. **Client confirmations still pending:** turnaround wording, and real job photos for the gallery (the current ones are placeholders).

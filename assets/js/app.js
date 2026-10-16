@@ -139,7 +139,7 @@
       <div class="container site-header__inner">
         <a class="brand" href="index.html" aria-label="${esc(C.brand)} home">
           <img class="brand__mark" src="assets/img/logo-mark-sm.webp" alt="" width="66" height="46">
-          <img class="brand__word" src="assets/img/logo-word.webp?v=20261016r" alt="${esc(C.brand)}" width="150" height="40">
+          <img class="brand__word" src="assets/img/logo-word.webp?v=20261016s" alt="${esc(C.brand)}" width="150" height="40">
         </a>
         <nav class="nav" id="nav" aria-label="Main">
           <button class="icon-btn nav__close" type="button" aria-label="Close menu" data-close-nav>${I("close")}</button>
@@ -169,8 +169,8 @@
       <div class="container">
         <div class="footer-grid">
           <div class="footer-brand">
-            <img src="assets/img/logo-word.webp?v=20261016r" alt="${esc(C.brand)}" width="225" height="60" loading="lazy">
-            <p>${esc(C.tagline)} Premium DTF transfers, custom apparel, saree & blouse prints, hotel branding and DTF consumables — from ${esc(a.city)} to all of India.</p>
+            <img src="assets/img/logo-word.webp?v=20261016s" alt="${esc(C.brand)}" width="225" height="60" loading="lazy">
+            <p>${esc(C.tagline)} Premium DTF transfers, custom apparel, saree & blouse prints, hotel branding and DTF consumables — from ${esc(a.city)} (Vizag), ${esc(a.state)} to all of India.</p>
             <span class="unit-pill">${I("sparkle")} ${esc(C.parent)}</span>
             <div class="socials">
               <a href="https://instagram.com/${C.instagram}" target="_blank" rel="noopener" aria-label="Instagram">${I("instagram")}</a>

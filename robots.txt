@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 Disallow: /orders.html
-Sitemap: https://trendli9prints.com/sitemap.xml
+Sitemap: https://portfolio.hirerockysolutions.com/trendli9-prints/sitemap.xml

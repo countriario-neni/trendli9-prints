@@ -14,7 +14,7 @@ const dims = img => IMG[img] || [1024, 768];
 
 const aud = AUDIENCES.map((a, i) => `
           <article class="aud reveal" id="${a.id}" aria-labelledby="${a.id}-t"${i % 2 ? ' data-delay="1"' : ""}>
-            <figure class="aud__media"><img src="assets/img/${a.img}.webp" alt="" loading="lazy" width="${dims(a.img)[0]}" height="${dims(a.img)[1]}"></figure>
+            <figure class="aud__media"><img src="assets/img/${a.img}.webp" alt="${esc(a.name)}: DTF printing job work in Visakhapatnam" loading="lazy" width="${dims(a.img)[0]}" height="${dims(a.img)[1]}"></figure>
             <div class="aud__body">
               <h3 id="${a.id}-t"><i data-icon="${a.icon}"></i> ${esc(a.name)}</h3>
               <p class="aud__title">${esc(a.title)}</p>
