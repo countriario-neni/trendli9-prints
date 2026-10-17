@@ -19,7 +19,7 @@ Static website (HTML/CSS/vanilla JS, **no build step**) for **Trendli9 Prints**,
 - **Ordering happens only on WhatsApp.** There are no payments and no accounts. Every ordering section opens WhatsApp **directly on the business number** with the order text filled in **plus a link whose preview image shows the design**. The customer only taps Send.
   - No share sheet, no downloads, no copy/paste, no picking a contact. The client explicitly rejected each of these.
 - Use `https://api.whatsapp.com/send?phone=…&text=…`, **never `wa.me`**. wa.me's redirect corrupts emoji and ⚠ into "�".
-- **Bump the cache version after any CSS/JS edit:** replace `?v=20261017c` in **all** HTML files with a new value. Assets are served immutable.
+- **Bump the cache version after any CSS/JS edit:** replace `?v=20261017d` in **all** HTML files with a new value. Assets are served immutable.
 - Keep the Trendli9 identity: Bricolage Grotesque + Inter, CMYK logo dots, white paper background. The client likes demaprints.com, but never copy its headings or copy.
 - Prefer free / open-source assets. Photo credits go in `THIRD_PARTY_NOTICES.txt`.
 - The apron is an **enquiry-only** printing service (`enquiry: true`, `price: null` in the catalog), not a product for sale.
