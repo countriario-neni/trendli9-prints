@@ -523,8 +523,9 @@ a.info-item:hover { transform: translateY(-3px); box-shadow: var(--sh-2); }
 .map { border: 0; width: 100%; height: 340px; border-radius: var(--r-lg); filter: saturate(1.1); }
 
 /* ---------- Studio ---------- */
-.studio { display: grid; grid-template-columns: 300px 1fr 340px; gap: 20px; align-items: start; }
-@media (max-width: 1180px) { .studio { grid-template-columns: 1fr 340px; } .studio__left { grid-column: 1 / -1; } }
+/* design editing sits on the left of the garment; product, colour and order on the right */
+.studio { display: grid; grid-template-columns: 340px 1fr 300px; gap: 20px; align-items: start; }
+@media (max-width: 1180px) { .studio { grid-template-columns: 340px 1fr; } .studio__right { grid-column: 1 / -1; } }
 @media (max-width: 860px) { .studio { grid-template-columns: 1fr; } }
 .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 18px; }
 .panel + .panel { margin-top: 16px; }

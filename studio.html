@@ -20,7 +20,7 @@
   <link rel="icon" href="favicon.ico" sizes="32x32"><link rel="apple-touch-icon" href="assets/img/icon-180.png"><link rel="manifest" href="site.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&family=Nunito+Sans:wght@700&family=Unbounded:wght@700&family=Bebas+Neue&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261017b">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261017c">
 </head>
 <body>
   <div id="site-header"></div>
@@ -30,38 +30,16 @@
       <div class="container">
         <nav class="crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span aria-hidden="true">/</span><span aria-current="page">Design Studio</span></nav>
         <h1>Design your own <span class="grad-text">custom T-shirt</span></h1>
-        <p>Pick a product, upload your artwork or add text, choose a square, circle or rectangle in 2×2, 3×3 or 4×4 in, and drag it to the exact spot. When you're happy, send it on WhatsApp and our team replies with a quote.</p>
+        <p>Upload your artwork or add text on the left, choose a square, circle or rectangle in 2×2, 3×3 or 4×4 in, and drag it to the exact spot. Pick the product and colour on the right. When you're happy, send it on WhatsApp and our team replies with a quote.</p>
       </div>
     </section>
 
     <section class="section section--tint" style="padding-top:32px">
       <div class="container studio">
-        <!-- LEFT: product + colour -->
+        <!-- LEFT: your design (upload, text, shape, size, position) -->
         <div class="studio__left">
-          <div class="panel"><h2><span class="n">1</span> Choose product</h2><div class="prod-pick" id="prodPick" role="group" aria-label="Products"></div></div>
-          <div class="panel"><h2><span class="n">2</span> Colour: <span id="colorName" style="font-family:var(--font-body);font-weight:800"></span></h2><div class="color-opts" id="colorOpts" role="radiogroup" aria-label="Garment colour"></div></div>
-        </div>
-
-        <!-- CENTER: stage -->
-        <div class="stage" id="stage">
-          <div class="stage__toolbar">
-            <div class="seg-ctrl" role="group" aria-label="Side">
-              <button type="button" data-side="front" aria-pressed="true">Front</button>
-              <button type="button" data-side="back" aria-pressed="false">Back</button>
-            </div>
-            <div style="display:flex;gap:6px">
-              <button class="icon-btn" type="button" id="guideBtn" aria-pressed="true" aria-label="Toggle print area guide" title="Print area guide"><i data-icon="ruler"></i></button>
-              <button class="icon-btn" type="button" id="dlBtn" aria-label="Download mockup image" title="Download mockup"><i data-icon="download"></i></button>
-            </div>
-          </div>
-          <div class="stage__canvas" id="canvas" tabindex="0" aria-label="Design preview. Select a layer, then use arrow keys to move it and Delete to remove it."></div>
-          <p class="stage__hint" id="hint">Upload artwork or add text — then drag to position inside the dashed print area.</p>
-        </div>
-
-        <!-- RIGHT: design + order -->
-        <div class="studio__right">
           <div class="panel">
-            <h2><span class="n">3</span> Add your design</h2>
+            <h2><span class="n">1</span> Add your design</h2>
             <label class="drop" id="drop" for="file"><i data-icon="upload"></i><b>Upload artwork</b><small>PNG with transparent background works best · JPG, SVG, WEBP</small></label>
             <input type="file" id="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="sr-only" multiple>
             <div class="field" style="margin:14px 0 8px">
@@ -88,7 +66,28 @@
               </div>
             </div>
           </div>
+        </div>
 
+        <!-- CENTER: stage -->
+        <div class="stage" id="stage">
+          <div class="stage__toolbar">
+            <div class="seg-ctrl" role="group" aria-label="Side">
+              <button type="button" data-side="front" aria-pressed="true">Front</button>
+              <button type="button" data-side="back" aria-pressed="false">Back</button>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button class="icon-btn" type="button" id="guideBtn" aria-pressed="true" aria-label="Toggle print area guide" title="Print area guide"><i data-icon="ruler"></i></button>
+              <button class="icon-btn" type="button" id="dlBtn" aria-label="Download mockup image" title="Download mockup"><i data-icon="download"></i></button>
+            </div>
+          </div>
+          <div class="stage__canvas" id="canvas" tabindex="0" aria-label="Design preview. Select a layer, then use arrow keys to move it and Delete to remove it."></div>
+          <p class="stage__hint" id="hint">Upload artwork or add text — then drag to position inside the dashed print area.</p>
+        </div>
+
+        <!-- RIGHT: product, colour, sizes, quote -->
+        <div class="studio__right">
+          <div class="panel"><h2><span class="n">2</span> Choose product</h2><div class="prod-pick" id="prodPick" role="group" aria-label="Products"></div></div>
+          <div class="panel"><h2><span class="n">3</span> Colour: <span id="colorName" style="font-family:var(--font-body);font-weight:800"></span></h2><div class="color-opts" id="colorOpts" role="radiogroup" aria-label="Garment colour"></div></div>
           <div class="panel">
             <h2><span class="n">4</span> Sizes & quantity</h2>
             <div class="size-grid" id="sizeGrid"></div>
@@ -126,11 +125,11 @@
     </div>
   </div>
   <div id="site-footer"></div>
-  <script src="assets/js/config.js?v=20261017b"></script>
-  <script src="assets/js/catalog.js?v=20261017b"></script>
-  <script src="assets/js/icons.js?v=20261017b"></script>
-  <script src="assets/js/mockups.js?v=20261017b"></script>
-  <script src="assets/js/app.js?v=20261017b"></script>
-  <script src="assets/js/studio.js?v=20261017b"></script>
+  <script src="assets/js/config.js?v=20261017c"></script>
+  <script src="assets/js/catalog.js?v=20261017c"></script>
+  <script src="assets/js/icons.js?v=20261017c"></script>
+  <script src="assets/js/mockups.js?v=20261017c"></script>
+  <script src="assets/js/app.js?v=20261017c"></script>
+  <script src="assets/js/studio.js?v=20261017c"></script>
 </body>
 </html>

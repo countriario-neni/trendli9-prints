@@ -19,7 +19,7 @@ Static website (HTML/CSS/vanilla JS, **no build step**) for **Trendli9 Prints**,
 - **Ordering happens only on WhatsApp.** There are no payments and no accounts. Every ordering section opens WhatsApp **directly on the business number** with the order text filled in **plus a link whose preview image shows the design**. The customer only taps Send.
   - No share sheet, no downloads, no copy/paste, no picking a contact. The client explicitly rejected each of these.
 - Use `https://api.whatsapp.com/send?phone=…&text=…`, **never `wa.me`**. wa.me's redirect corrupts emoji and ⚠ into "�".
-- **Bump the cache version after any CSS/JS edit:** replace `?v=20261017b` in **all** HTML files with a new value. Assets are served immutable.
+- **Bump the cache version after any CSS/JS edit:** replace `?v=20261017c` in **all** HTML files with a new value. Assets are served immutable.
 - Keep the Trendli9 identity: Bricolage Grotesque + Inter, CMYK logo dots, white paper background. The client likes demaprints.com, but never copy its headings or copy.
 - Prefer free / open-source assets. Photo credits go in `THIRD_PARTY_NOTICES.txt`.
 - The apron is an **enquiry-only** printing service (`enquiry: true`, `price: null` in the catalog), not a product for sale.
@@ -29,6 +29,7 @@ Static website (HTML/CSS/vanilla JS, **no build step**) for **Trendli9 Prints**,
   - Sizes: **2×2, 3×3, 4×4 in** (square, circle, as uploaded = longer side, plain text = longer side); rectangle **3×2, 4×3, 6×4 in**. Sizes that don't fit a product's print area are disabled.
   - Spot: Top left (default on the front, as you look at the garment) / Top centre (default on the back) / Top right / Centre, or drag anywhere; designs always stay inside the dashed print area.
   - The WhatsApp order lists each design's shape, size and position (inches from the centre line and from the top of the print area) and attaches a **300 DPI print-ready PNG per design** besides the mockup and originals.
+  - Layout: design editing (upload, text, shape, size, position) is the **left** column, the garment in the middle, product / colour / sizes / quote on the right (client request, 2026-10-17).
   - Each mockup print area has `inW` (real width in inches) in `assets/js/mockups.js`, which sets the scale.
 - **Files are UTF-8 with LF line endings.** On 2026-10-17 `tools/seo.py` run on Windows wrote the SEO blocks in cp1252 and every page showed "�" in titles; the script now always writes UTF-8. If you edit with other tools on Windows, keep UTF-8.
 
