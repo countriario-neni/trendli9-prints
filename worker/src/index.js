@@ -65,6 +65,10 @@ async function createOrder(req, env, url, cors, okOrigin) {
   const put = async (name, f) => env.ORDERS.put(base + name, await f.arrayBuffer(), { expirationTtl: TTL, metadata: { type: f.type } });
   if (card.size > MAX_VALUE) return json({ error: "order image too large" }, 413, cors);
   const used = new Set(), stored = [], skipped = [];
+  try { // files the website kept back (over the size limits): list them so the studio asks for them
+    for (const s of JSON.parse(String(fd.get("skipped") || "[]")).slice(0, MAX_FILES))
+      if (s && typeof s.label === "string") skipped.push({ label: s.label.slice(0, 200), size: Math.max(0, +s.size || 0) });
+  } catch { }
   await put("card.png", card);
   const hasPreview = isFile(preview) && preview.type === "image/jpeg" && preview.size <= MAX_VALUE;
   const pw = Math.min(4000, +fd.get("pw") || 0) | 0, ph = Math.min(8000, +fd.get("ph") || 0) | 0; // preview size for og:image tags

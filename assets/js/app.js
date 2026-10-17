@@ -546,8 +546,8 @@
      For browsers that can't share files: the order image and files are uploaded
      and WhatsApp opens with the order text plus a link to them. WhatsApp shows
      the link's preview (the order image) inside the same message. */
-  // the free order store keeps files up to 10 MB each; bigger print sheets stay on the device
-  const UPLOAD_MAX_FILES = 29, UPLOAD_MAX_BYTES = 60 * 1024 * 1024, UPLOAD_MAX_EACH = 10 * 1024 * 1024;
+  // the order store keeps files up to 25 MB each (KV's limit); bigger ones stay on the device and are listed on the order page
+  const UPLOAD_MAX_FILES = 29, UPLOAD_MAX_BYTES = 90 * 1024 * 1024, UPLOAD_MAX_EACH = 25 * 1024 * 1024 - 1024;
   /* The link-preview image. WhatsApp shows a large preview only for a wide image
      (about 1.91:1) under ~300 KB; a tall one shrinks to a small cropped thumbnail.
      So: 1200×630 with the design pictures as big as they fit (the order text is
@@ -592,10 +592,12 @@
     fd.append("card", files[0], files[0].name);
     try { const p = await previewJPEG(files[0]); fd.append("preview", p, p.name); fd.append("pw", p.w); fd.append("ph", p.h); } catch { }
     let total = files[0].size, n = 0;
+    const skipped = [];
     for (const f of files.slice(1)) {
-      if (n >= UPLOAD_MAX_FILES || f.size > UPLOAD_MAX_EACH || total + f.size > UPLOAD_MAX_BYTES) continue;
+      if (n >= UPLOAD_MAX_FILES || f.size > UPLOAD_MAX_EACH || total + f.size > UPLOAD_MAX_BYTES) { skipped.push({ label: f.name, size: f.size }); continue; }
       fd.append("files", f, f.name); total += f.size; n++;
     }
+    if (skipped.length) fd.append("skipped", JSON.stringify(skipped));
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", C.orderApi.replace(/\/+$/, "") + "/orders");

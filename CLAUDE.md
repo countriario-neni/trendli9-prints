@@ -19,7 +19,7 @@ Static website (HTML/CSS/vanilla JS, **no build step**) for **Trendli9 Prints**,
 - **Ordering happens only on WhatsApp.** There are no payments and no accounts. Every ordering section opens WhatsApp **directly on the business number** with the order text filled in **plus a link whose preview image shows the design**. The customer only taps Send.
   - No share sheet, no downloads, no copy/paste, no picking a contact. The client explicitly rejected each of these.
 - Use `https://api.whatsapp.com/send?phone=…&text=…`, **never `wa.me`**. wa.me's redirect corrupts emoji and ⚠ into "�".
-- **Bump the cache version after any CSS/JS edit:** replace `?v=20261016s` in **all** HTML files with a new value. Assets are served immutable.
+- **Bump the cache version after any CSS/JS edit:** replace `?v=20261017a` in **all** HTML files with a new value. Assets are served immutable.
 - Keep the Trendli9 identity: Bricolage Grotesque + Inter, CMYK logo dots, white paper background. The client likes demaprints.com, but never copy its headings or copy.
 - Prefer free / open-source assets. Photo credits go in `THIRD_PARTY_NOTICES.txt`.
 - The apron is an **enquiry-only** printing service (`enquiry: true`, `price: null` in the catalog), not a product for sale.
@@ -86,6 +86,8 @@ Static website (HTML/CSS/vanilla JS, **no build step**) for **Trendli9 Prints**,
 1. **Custom domain:** moved on 2026-10-17 (DNS, `CNAME`, root-relative `404.html`, `BASE` in `tools/seo.py`); canonical host switched to `www.trendli9.com` the same day. All 10 ordering flows were tested live and sent to the business WhatsApp on 2026-10-17.
 2. **Client confirmations still pending:** turnaround wording, and real job photos for the gallery (the current ones are placeholders).
 3. After any test sends: the owner should delete the TEST messages and remove the test browser under WhatsApp → Linked devices.
+4. **Deploy the order service** (`cd worker && npx wrangler deploy`). Since 2026-10-17 the website uploads files up to 25 MB each / 90 MB per order (was 10 MB, and bigger files were silently dropped) and sends a `skipped` list of files it had to keep back; the Worker change that shows those on the order page ("too large to store, ask the customer for it") is committed but not yet deployed.
+5. **Deferred: AI "enhance to 4K"** for uploaded designs. On hold until the client asks for it. When built: enhance **every** upload (owner's choice); engine still to decide (in-browser Real-ESRGAN vs a paid API through the Worker vs the studio doing it by hand).
 
 ## Local development
 
