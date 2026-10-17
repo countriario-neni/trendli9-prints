@@ -6,6 +6,11 @@ Re-run after changing BASE (e.g. when the site moves to trendli9.com):
 """
 import json, re, html, datetime, pathlib
 
+def write(path, text):
+    # always UTF-8 with \n line endings: the pages declare UTF-8, and Windows defaults to cp1252 + \r\n
+    with open(path, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(text)
+
 BASE = "https://www.trendli9.com/"
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OG_IMAGE = BASE + "assets/img/og-image.jpg"
@@ -62,7 +67,7 @@ def faq_from(page):
     return [{"@type": "Question", "name": strip(q), "acceptedAnswer": {"@type": "Answer", "text": strip(a)}} for q, a in items]
 
 def services_ld():
-    js = (ROOT / "assets/js/catalog.js").read_text()
+    js = (ROOT / "assets/js/catalog.js").read_text(encoding="utf-8")
     block = js[js.index("const SERVICES"):js.index("const GALLERY")]
     out = []
     for m in re.finditer(r'\{ id: "([^"]+)".*?name: "([^"]+)".*?short: "([^"]+)"', block, re.S):
@@ -108,7 +113,7 @@ def head_block(f, title, desc, crumb, noindex, page):
     return "\n  ".join(lines)
 
 for f, (title, desc, crumb, noindex) in PAGES.items():
-    p = ROOT / f; s = p.read_text()
+    p = ROOT / f; s = p.read_text(encoding="utf-8")
     if START in s:
         s = re.sub(re.escape(START) + r".*?" + re.escape(END), lambda m: "", s, flags=re.S)
     else:  # first run: drop the hand-written tags this block replaces
@@ -117,10 +122,10 @@ for f, (title, desc, crumb, noindex) in PAGES.items():
         s = re.sub(r'\s*<meta (property|name)="(og|twitter):[^"]+" content="[^"]*">', "", s)
         s = re.sub(r'\s*<script type="application/ld\+json">.*?</script>', "", s, flags=re.S)
     s = re.sub(r'(<meta name="viewport"[^>]*>)\n\s*', lambda m: m.group(1) + "\n  " + head_block(f, title, desc, crumb, noindex, s) + "\n  ", s, count=1)
-    p.write_text(s)
+    write(p, s)
 
 indexed = [f for f, v in PAGES.items() if not v[3]]
-(ROOT / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+write(ROOT / "sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
     "".join(f'  <url><loc>{BASE if f == "index.html" else BASE + f}</loc><lastmod>{TODAY}</lastmod></url>\n' for f in indexed) + "</urlset>\n")
-(ROOT / "robots.txt").write_text(f"User-agent: *\nAllow: /\nDisallow: /orders.html\nSitemap: {BASE}sitemap.xml\n")
+write(ROOT / "robots.txt", f"User-agent: *\nAllow: /\nDisallow: /orders.html\nSitemap: {BASE}sitemap.xml\n")
 print("SEO head written to", len(PAGES), "pages; sitemap has", len(indexed), "URLs")
