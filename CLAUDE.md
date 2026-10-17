@@ -7,7 +7,8 @@ Everything described here is committed on `main` and live.
 
 Static website (HTML/CSS/vanilla JS, **no build step**) for **Trendli9 Prints**, a DTF printing studio in Visakhapatnam (a unit of Colorflu). It sells B2B (job work for printers, brands, garment makers, boutiques, bulk buyers) **and** B2C. All copy must address both.
 
-- **Live:** https://portfolio.hirerockysolutions.com/trendli9-prints/ (GitHub Pages, repo `countriario-neni/trendli9-prints`, branch `main`; this folder is the repo root)
+- **Live:** https://trendli9.com/ (GitHub Pages, repo `countriario-neni/trendli9-prints`, branch `main`; this folder is the repo root). The old address https://portfolio.hirerockysolutions.com/trendli9-prints/ redirects there.
+- **Domain:** trendli9.com, registered 2026-10-17 at Cloudflare Registrar (expires 2027-10-17). DNS in the Cloudflare zone: four apex `A` records to 185.199.108–111.153 and `CNAME www` → `countriario-neni.github.io`, all **DNS only** (not proxied), so GitHub issues the HTTPS certificate. `CNAME` file at the repo root holds `trendli9.com`.
 - **Deploy:** commit and `git push origin main`. Pages updates in about 1 minute.
 - **Order service:** https://trendli9-orders.trendli9-orders.workers.dev (Cloudflare Worker in `worker/`)
 - **Business WhatsApp:** +91 99326 27413 (`919932627413`). Instagram `trend.li9`.
@@ -82,12 +83,7 @@ Static website (HTML/CSS/vanilla JS, **no build step**) for **Trendli9 Prints**,
 
 ## Open tasks
 
-1. **Move to the custom domain trendli9.com.** As of 2026-10-16 the domain is **not registered** (registry RDAP returns 404). The owner must buy it first. Then:
-   - DNS: four apex `A` records to 185.199.108.153, 185.199.109.153, 185.199.110.153 and 185.199.111.153, plus `CNAME www` → `countriario-neni.github.io`.
-   - Add a file `CNAME` containing `trendli9.com` at the repo root, push, and turn on "Enforce HTTPS" in the repo's Pages settings.
-   - `404.html` uses absolute `/trendli9-prints/` paths. Change them to `/` when moving to the root domain. Set `BASE` in `tools/seo.py` to `https://trendli9.com/` and run it (updates canonicals, Open Graph, JSON-LD, sitemap and robots).
-   - **Do not add `CNAME` before DNS resolves.** It would redirect the live site to a dead domain.
-   - Then re-test every ordering flow on https://trendli9.com.
+1. **Custom domain trendli9.com:** moved on 2026-10-17 (DNS, `CNAME`, root-relative `404.html`, `BASE` in `tools/seo.py`). Re-test every ordering flow on https://trendli9.com after HTTPS is enforced.
 2. **Client confirmations still pending:** turnaround wording, and real job photos for the gallery (the current ones are placeholders).
 3. After any test sends: the owner should delete the TEST messages and remove the test browser under WhatsApp → Linked devices.
 
