@@ -84,7 +84,19 @@
   const SIZES = { square: [[2, 2], [3, 3], [4, 4]], circle: [[2, 2], [3, 3], [4, 4]], rect: [[3, 2], [4, 3], [6, 4]], original: [[2, 2], [3, 3], [4, 4]], none: [[2, 2], [3, 3], [4, 4]] };
   const DEF_SIZE = 1; // 3×3 in
   const sizeLabel = (shape, i) => { const [w, h] = SIZES[shape][i]; return `${w}×${h} in`; };
-  const PLACES = [["tl", "Top left"], ["tc", "Top centre"], ["tr", "Top right"], ["c", "Centre"]];
+  // Spots. On garments, left/right are AS WORN (the wearer's left chest is the usual logo spot,
+  // which shows on the right of the screen when you face the shirt); caps, totes and cushions
+  // use left/right as you look at them. Keys: tl = left, tc = centre top, tr = right, c = middle.
+  const WORN = ["tee", "polo", "hoodie", "sweatshirt"];
+  const worn = () => WORN.includes(S.product.mockup);
+  function placeItems(side) {
+    if (!worn()) return [["tl", "Top left"], ["tc", "Top centre"], ["tr", "Top right"], ["c", "Centre"]];
+    return side === "front"
+      ? [["tl", "Left chest"], ["tc", "Centre chest"], ["tr", "Right chest"], ["c", "Centre"]]
+      : [["tl", "Upper left"], ["tc", "Upper centre"], ["tr", "Upper right"], ["c", "Centre"]];
+  }
+  // does "left" sit on the left of the screen? Not on the front of a worn garment (mirror image)
+  const leftOnScreenLeft = side => !(worn() && side === "front");
   const defPlace = side => side === "back" ? "tc" : "tl";
 
   // text metrics at a 100-unit font size, from an off-screen canvas (same engine that draws the files)
@@ -124,7 +136,8 @@
   function place(L, side) {
     const a = MK.areaFor(S.product.mockup, side), k = ppi(side), W = L.wIn * k, H = L.hIn * k, m = .5 * k;
     const pl = L.place === "custom" ? "c" : L.place;
-    L.x = pl === "tl" ? a.x + m + W / 2 : pl === "tr" ? a.x + a.w - m - W / 2 : a.x + a.w / 2;
+    const atLeft = a.x + m + W / 2, atRight = a.x + a.w - m - W / 2, flip = !leftOnScreenLeft(side);
+    L.x = pl === "tl" ? (flip ? atRight : atLeft) : pl === "tr" ? (flip ? atLeft : atRight) : a.x + a.w / 2;
     L.y = pl === "c" ? a.y + a.h / 2 : a.y + m + H / 2;
     clamp(L, side);
   }
@@ -204,7 +217,7 @@
     const L = sel(); $("#layerCtrl").hidden = !L; if (!L) return;
     chips($("#cShape"), shapeItems(L), L.shape);
     chips($("#cSize"), sizeItems(L), String(L.si), v => !fits(L, L.shape, +v, S.side));
-    chips($("#cPlace"), PLACES, L.place);
+    chips($("#cPlace"), placeItems(S.side), L.place);
     $("#cRot").value = L.rot; $("#oRot").textContent = L.rot + "°";
     $("#textCtrl").hidden = L.type !== "text";
     if (L.type === "text") { $("#cText").value = L.text; $("#cFont").value = L.font; $("#cColor").value = L.color; $("#cFill").value = L.fill; $("#cFillWrap").hidden = L.shape === "none"; }
@@ -234,7 +247,7 @@
     const L = cur().find(l => l.id === g.dataset.id); if (!L) return;
     if (S.selected !== L.id) { S.selected = L.id; draw(); }
     const pt = toSVG(canvas.querySelector("svg"), e); drag = { L, dx: pt.x - L.x, dy: pt.y - L.y, moved: false };
-    canvas.setPointerCapture(e.pointerId); e.preventDefault();
+    try { canvas.setPointerCapture(e.pointerId); } catch { } e.preventDefault();
   });
   canvas.addEventListener("pointermove", e => {
     if (!drag) return; const svg = canvas.querySelector("svg"), pt = toSVG(svg, e);
@@ -260,8 +273,8 @@
     const { L, side } = ask;
     chips($("#shShape"), shapeItems(L), L.shape);
     chips($("#shSize"), sizeItems(L), String(L.si), v => !fits(L, L.shape, +v, side));
-    chips($("#shPlace"), PLACES, L.place);
-    $("#shPlaceLbl").textContent = `Where on the ${side}`;
+    chips($("#shPlace"), placeItems(side), L.place);
+    $("#shPlaceLbl").textContent = `Where on the ${side}${worn() ? " (left and right as worn)" : ""}`;
     // preview: the print on a swatch of the garment colour, drawn at a fixed scale (inches visible)
     const k = 34, pad = 14, W = L.wIn * k, H = L.hIn * k, bw = Math.max(W, 6 * k) + pad * 2, bh = Math.max(H, 3 * k) + pad * 2;
     $("#shPreview").innerHTML = `<svg viewBox="${-bw / 2} ${-bh / 2} ${bw} ${bh}" role="img" aria-label="Preview of your print"><rect x="${-bw / 2}" y="${-bh / 2}" width="${bw}" height="${bh}" fill="${S.product.colors[S.colorIdx].hex}"/>${layerSVG(L, k, 0, 0, 0)}</svg>`;
@@ -382,8 +395,10 @@
   function spot(L, side) {
     const a = MK.areaFor(S.product.mockup, side), k = ppi(side);
     const dx = (L.x - (a.x + a.w / 2)) / k, top = (L.y - L.hIn * k / 2 - a.y) / k;
-    const pl = PLACES.find(([v]) => v === L.place);
-    return `${pl ? pl[1].toLowerCase() : "custom spot"}: ${Math.abs(dx) < .1 ? "centred" : `${f1(Math.abs(dx))} in ${dx < 0 ? "left" : "right"} of centre`}, ${f1(Math.max(0, top))} in below the top of the print area`;
+    const pl = placeItems(side).find(([v]) => v === L.place);
+    // screen-left is the wearer's right on the front of a garment
+    const toLeft = leftOnScreenLeft(side) ? dx < 0 : dx > 0, who = worn() ? "wearer's " : "";
+    return `${pl ? pl[1].toLowerCase() : "custom spot"}: ${Math.abs(dx) < .1 ? "centred" : `${f1(Math.abs(dx))} in to the ${who}${toLeft ? "left" : "right"} of centre`}, ${f1(Math.max(0, top))} in below the top of the print area`;
   }
   function describe(L, side) {
     const what = L.type === "image" ? `artwork "${L.name}"` : `text "${L.text}" (${L.font}, ${L.color}${L.shape !== "none" ? `, on a ${L.fill} badge` : ""})`;
@@ -438,7 +453,7 @@
     if (needQty()) return;
     const i = buildItem(); S.dirty = false;
     const text = [`Hi Trendli9! I designed this in your Design Studio:`, ``, `*${i.name}* — ${i.color}`, `Sizes: ${Object.entries(i.sizes).map(([s, q]) => `${s}×${q}`).join(", ")} (${i.qty} pcs)`,
-      `Print: ${i.areas.join(", ")}`, `Designs (positions as you look at the garment):`, i.design, i.notes ? `Notes: ${i.notes}` : null, ``, `Mockup, print-ready files (300 DPI) and my original artwork are attached. Please share a quote.`].filter(x => x !== null).join("\n");
+      `Print: ${i.areas.join(", ")}`, `Designs (${worn() ? "left/right as worn" : "left/right as you look at it"}; see the mockup):`, i.design, i.notes ? `Notes: ${i.notes}` : null, ``, `Mockup, print-ready files (300 DPI) and my original artwork are attached. Please share a quote.`].filter(x => x !== null).join("\n");
     // one order card (mockups + this text) leads the files, so the studio sees design and details together
     const getFiles = async () => {
       const files = await orderFiles();
