@@ -6,7 +6,7 @@ Re-run after changing BASE (e.g. when the site moves to trendli9.com):
 """
 import json, re, html, datetime, pathlib
 
-BASE = "https://trendli9.com/"
+BASE = "https://www.trendli9.com/"
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OG_IMAGE = BASE + "assets/img/og-image.jpg"
 TODAY = datetime.date.today().isoformat()

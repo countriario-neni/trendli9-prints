@@ -7,8 +7,8 @@ Everything described here is committed on `main` and live.
 
 Static website (HTML/CSS/vanilla JS, **no build step**) for **Trendli9 Prints**, a DTF printing studio in Visakhapatnam (a unit of Colorflu). It sells B2B (job work for printers, brands, garment makers, boutiques, bulk buyers) **and** B2C. All copy must address both.
 
-- **Live:** https://trendli9.com/ (GitHub Pages, repo `countriario-neni/trendli9-prints`, branch `main`; this folder is the repo root). The old address https://portfolio.hirerockysolutions.com/trendli9-prints/ redirects there.
-- **Domain:** trendli9.com, registered 2026-10-17 at Cloudflare Registrar (expires 2027-10-17). DNS in the Cloudflare zone: four apex `A` records to 185.199.108–111.153 and `CNAME www` → `countriario-neni.github.io`, all **DNS only** (not proxied), so GitHub issues the HTTPS certificate. `CNAME` file at the repo root holds `trendli9.com`.
+- **Live:** https://www.trendli9.com/ (client wants the www address; https://trendli9.com redirects to it) (GitHub Pages, repo `countriario-neni/trendli9-prints`, branch `main`; this folder is the repo root). The old address https://portfolio.hirerockysolutions.com/trendli9-prints/ also redirects there.
+- **Domain:** trendli9.com, registered 2026-10-17 at Cloudflare Registrar (expires 2027-10-17). DNS in the Cloudflare zone: four apex `A` records to 185.199.108–111.153 and `CNAME www` → `countriario-neni.github.io`, all **DNS only** (not proxied), so GitHub issues the HTTPS certificate. `CNAME` file at the repo root holds `www.trendli9.com` (GitHub then redirects the apex to www).
 - **Deploy:** commit and `git push origin main`. Pages updates in about 1 minute.
 - **Order service:** https://trendli9-orders.trendli9-orders.workers.dev (Cloudflare Worker in `worker/`)
 - **Business WhatsApp:** +91 99326 27413 (`919932627413`). Instagram `trend.li9`.
@@ -83,7 +83,7 @@ Static website (HTML/CSS/vanilla JS, **no build step**) for **Trendli9 Prints**,
 
 ## Open tasks
 
-1. **Custom domain trendli9.com:** moved on 2026-10-17 (DNS, `CNAME`, root-relative `404.html`, `BASE` in `tools/seo.py`). Re-test every ordering flow on https://trendli9.com after HTTPS is enforced.
+1. **Custom domain:** moved on 2026-10-17 (DNS, `CNAME`, root-relative `404.html`, `BASE` in `tools/seo.py`); canonical host switched to `www.trendli9.com` the same day. All 10 ordering flows were tested live and sent to the business WhatsApp on 2026-10-17.
 2. **Client confirmations still pending:** turnaround wording, and real job photos for the gallery (the current ones are placeholders).
 3. After any test sends: the owner should delete the TEST messages and remove the test browser under WhatsApp → Linked devices.
 
