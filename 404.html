@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Service paused</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #f7f4ee; --bg2: #e9e4f5; --ink: #16141f; --muted: #5b5868;
+    --c: #00aeef; --m: #ec008c; --y: #ffd100;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg1: #0f0e15; --bg2: #1d1830; --ink: #f4f2fa; --muted: #a9a5b8; }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    display: grid; place-items: center; padding: 24px 16px;
+    font-family: "Bricolage Grotesque", system-ui, sans-serif; color: var(--ink);
+    background:
+      radial-gradient(60vmax 60vmax at 0% 0%, color-mix(in srgb, var(--c) 22%, transparent), transparent 60%),
+      radial-gradient(55vmax 55vmax at 100% 100%, color-mix(in srgb, var(--m) 20%, transparent), transparent 60%),
+      radial-gradient(40vmax 40vmax at 100% 0%, color-mix(in srgb, var(--y) 18%, transparent), transparent 60%),
+      linear-gradient(160deg, var(--bg1), var(--bg2));
+    background-attachment: fixed;
+  }
+  main { max-width: 22ch; text-align: center; }
+  h1 {
+    font-weight: 800; line-height: 1.08; letter-spacing: -0.02em;
+    font-size: clamp(2rem, 6.5vw, 4.75rem); text-wrap: balance;
+  }
+  .dots { display: flex; gap: 10px; justify-content: center; margin-bottom: 28px; }
+  .dots i { width: 14px; height: 14px; border-radius: 50%; display: block; }
+</style>
+</head>
+<body>
+<main>
+  <div class="dots" aria-hidden="true">
+    <i style="background:var(--c)"></i><i style="background:var(--m)"></i><i style="background:var(--y)"></i><i style="background:var(--ink)"></i>
+  </div>
+  <h1>Please make the payment to resume the services, contact the website developer</h1>
+</main>
+</body>
+</html>
