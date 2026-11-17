@@ -169,12 +169,12 @@
   function statusOf(d) {
     const dpi = dpiOf(d);
     if (!fitOf(d).fits || dpi < 150) return "bad";
-    if (dpi < 300 || d.opaque || stretched(d)) return "review";
+    if (dpi < 300 || d.vector || d.transparency === null || d.opaque || stretched(d)) return "review";
     return "ok";
   }
   const dpiLabel = d => {
     const dpi = dpiOf(d);
-    if (!isFinite(dpi)) return { cls: "ok", txt: "Vector ✓" };
+    if (!isFinite(dpi)) return { cls: "review", txt: "SVG - review" };
     const n = dpi;
     return n >= 300 ? { cls: "ok", txt: `${n} DPI ✓` } : n >= 150 ? { cls: "review", txt: `${n} DPI · review` } : { cls: "bad", txt: `${n} DPI · needs a fix` };
   };
@@ -235,7 +235,7 @@
       const a = x.getImageData(0, 0, w, h).data;
       for (let i = 3; i < a.length; i += 4) if (a[i] < 250) return true;
       return false;
-    } catch { return true; } // can't sample (e.g. tainted SVG) — don't warn
+    } catch { return null; } // Sampling failed; background remains unverified.
   }
   // default print width: 10 in or the art's 300-DPI width, whichever is smaller
   const defaultWidth = d => clamp(d.vector ? 10 : Math.min(10, artPx(d)[0] / DPI), SIZE_MIN, W_MAX);
@@ -248,11 +248,12 @@
       const vector = /svg/i.test(type) || /\.svg$/i.test(name || "");
       let pw = img.naturalWidth, ph = img.naturalHeight;
       if (!pw || !ph) { pw = 1000; ph = 1000; } // SVG without intrinsic size
+      const transparency = hasTransparency(img, /jpe?g$/i.test(type) || /\.jpe?g$/i.test(name || ""));
       const d = {
         id: "d" + (++uid), name: name || "design", file, img, url, pw, ph, vector,
         trim: { x: 0, y: 0, w: pw, h: ph }, rot: 0, flipH: false, flipV: false,
         wIn: 0, hIn: 0, lock: true, qty: 1,
-        opaque: !hasTransparency(img, /jpe?g$/i.test(type) || /\.jpe?g$/i.test(name || ""))
+        transparency, opaque: transparency === false
       };
       d.wIn = widthIn ? clamp(widthIn, SIZE_MIN, W_MAX) : defaultWidth(d);
       d.hIn = d.wIn * aspect(d);
@@ -314,6 +315,13 @@
         </div>
         <label class="gs-lock"><input type="checkbox" data-f="lock"${d.lock ? " checked" : ""}> Lock aspect ratio</label>
         <p class="gs-card__orig" data-orig></p>
+        <details class="gs-card__orig">
+          <summary>Print check</summary>
+          <p data-check-dpi></p>
+          <p data-check-background></p>
+          <p data-check-fit></p>
+          <p>Check fine lines and pale or semi-transparent edges at full size. This tool cannot reliably detect every print issue.</p>
+        </details>
         <div class="gs-card__copies">
           <span>Copies on sheet</span>
           <div class="qty" role="group" aria-label="Copies of ${nm}">
@@ -355,7 +363,18 @@
     setVal(li.querySelector('[data-f="q"]'), d.qty);
     li.querySelector('[data-f="lock"]').checked = d.lock;
     const b = li.querySelector("[data-dpi]"); b.className = `gs-dpi gs-dpi--${dl.cls}`; b.textContent = dl.txt;
-    li.querySelector("[data-orig]").textContent = d.vector ? "Original: vector (SVG)" : `Original: ${d.pw} × ${d.ph} px`;
+    li.querySelector("[data-orig]").textContent = d.vector ? "Original: SVG" : `Original: ${d.pw} x ${d.ph} px`;
+    li.querySelector("[data-check-dpi]").textContent = d.vector
+      ? "Resolution: SVG - embedded images should be checked separately."
+      : `Resolution at print size: ${dpiOf(d)} DPI. ${dpiOf(d) >= 300 ? "300 DPI or higher." : "Review artwork quality at this size."}`;
+    li.querySelector("[data-check-background]").textContent = d.transparency === null
+      ? "Background: could not be checked. Inspect the artwork before printing."
+      : d.transparency
+        ? "Background: transparent pixels detected in a sample. Check for unwanted background or haze."
+        : "Background: no transparent pixels detected in a sample. Check for an unwanted printed box.";
+    li.querySelector("[data-check-fit]").textContent = f.fits
+      ? "Sheet fit: fits within the selected margins."
+      : "Sheet fit: does not fit at this size with the selected margins and rotation settings.";
     const x = li.querySelector("[data-x]"); x.hidden = n < 2; x.textContent = `×${n}`;
     li.querySelector("[data-stretch]").hidden = !stretched(d);
     li.querySelector("[data-lowres]").hidden = !(dpiOf(d) < 150);
@@ -487,9 +506,9 @@
   });
   // edit menus: one open at a time, close on outside click / Esc
   listEl.addEventListener("toggle", e => {
-    if (e.target.matches?.("details[open]")) listEl.querySelectorAll("details[open]").forEach(x => { if (x !== e.target) x.removeAttribute("open"); });
+    if (e.target.matches?.(".gs-menu[open]")) listEl.querySelectorAll(".gs-menu[open]").forEach(x => { if (x !== e.target) x.removeAttribute("open"); });
   }, true);
-  document.addEventListener("click", e => { if (!e.target.closest(".gs-menu")) listEl.querySelectorAll("details[open]").forEach(x => x.removeAttribute("open")); });
+  document.addEventListener("click", e => { if (!e.target.closest(".gs-menu")) listEl.querySelectorAll(".gs-menu[open]").forEach(x => x.removeAttribute("open")); });
   listEl.addEventListener("keydown", e => {
     const m = e.target.closest("details[open]");
     if (e.key === "Escape" && m) { m.removeAttribute("open"); m.querySelector("summary").focus(); }
@@ -931,7 +950,7 @@
   let prep = null; // { L, files: Promise<File[]> }
   const dpiNote = d => {
     const dpi = dpiOf(d);
-    return !isFinite(dpi) ? "vector ✓" : dpi >= 300 ? `${dpi} DPI ✓` : dpi >= 150 ? `${dpi} DPI ⚠ review` : `${dpi} DPI ⚠ low resolution`;
+    return !isFinite(dpi) ? "SVG - review embedded images" : dpi >= 300 ? `${dpi} DPI ✓` : dpi >= 150 ? `${dpi} DPI ⚠ review` : `${dpi} DPI ⚠ low resolution`;
   };
   function orderText(L, ctype, notes) {
     const nOrig = perDesign(L).size;
